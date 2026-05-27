@@ -1,15 +1,14 @@
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Mandelbrot.Core.Models;
 using Mandelbrot.Core.Services;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Graphics.Imaging;
 
 namespace Mandelbrot.UI.ViewModels;
 
@@ -20,7 +19,7 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
-    private WriteableBitmap? _fractalImage;
+    private SoftwareBitmapSource? _fractalImageSource;
 
     [ObservableProperty]
     private string _statusText = "Ready";
@@ -29,10 +28,14 @@ public partial class MainViewModel : ObservableObject
     private bool _isSelecting;
 
     [ObservableProperty]
-    private Point _selectionStart;
+    private double _selectionStartX;
+    [ObservableProperty]
+    private double _selectionStartY;
 
     [ObservableProperty]
-    private Point _selectionEnd;
+    private double _selectionEndX;
+    [ObservableProperty]
+    private double _selectionEndY;
 
     [ObservableProperty]
     private bool _canZoomOut;
@@ -44,12 +47,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _viewportHeight = 600;
 
-    public Rect SelectionRectangle => new Rect(
-        Math.Min(SelectionStart.X, SelectionEnd.X),
-        Math.Min(SelectionStart.Y, SelectionEnd.Y),
-        Math.Abs(SelectionEnd.X - SelectionStart.X),
-        Math.Abs(SelectionEnd.Y - SelectionStart.Y)
-    );
+    public double SelectionRectangleX => Math.Min(SelectionStartX, SelectionEndX);
+    public double SelectionRectangleY => Math.Min(SelectionStartY, SelectionEndY);
+    public double SelectionRectangleWidth => Math.Abs(SelectionEndX - SelectionStartX);
+    public double SelectionRectangleHeight => Math.Abs(SelectionEndY - SelectionStartY);
 
     public MainViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService)
     {
@@ -60,23 +61,18 @@ public partial class MainViewModel : ObservableObject
         _ = GenerateFractalAsync();
     }
 
-    // Default constructor for designer
-    public MainViewModel()
+    private void UpdateSelectionRectangleProperties()
     {
-        _fractalGenerator = new ParallelFractalGenerator();
-        _zoomService = new ZoomService();
-        _zoomService.Reset(ViewportWidth, ViewportHeight);
+        OnPropertyChanged(nameof(SelectionRectangleX));
+        OnPropertyChanged(nameof(SelectionRectangleY));
+        OnPropertyChanged(nameof(SelectionRectangleWidth));
+        OnPropertyChanged(nameof(SelectionRectangleHeight));
     }
 
-    partial void OnSelectionStartChanged(Point value)
-    {
-        OnPropertyChanged(nameof(SelectionRectangle));
-    }
-
-    partial void OnSelectionEndChanged(Point value)
-    {
-        OnPropertyChanged(nameof(SelectionRectangle));
-    }
+    partial void OnSelectionStartXChanged(double value) => UpdateSelectionRectangleProperties();
+    partial void OnSelectionStartYChanged(double value) => UpdateSelectionRectangleProperties();
+    partial void OnSelectionEndXChanged(double value) => UpdateSelectionRectangleProperties();
+    partial void OnSelectionEndYChanged(double value) => UpdateSelectionRectangleProperties();
 
     [RelayCommand]
     private async Task GenerateFractalAsync()
@@ -91,25 +87,24 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var viewport = _zoomService.CurrentViewport;
-            // Max iterations can scale with zoom level later
             int maxIterations = 200;
 
             byte[] pixelData = await _fractalGenerator.GenerateAsync(viewport, maxIterations, token);
 
             if (!token.IsCancellationRequested)
             {
-                var bitmap = new WriteableBitmap(
-                    new PixelSize(viewport.ImageWidth, viewport.ImageHeight),
-                    new Vector(96, 96),
-                    PixelFormat.Bgra8888,
-                    AlphaFormat.Opaque);
+                var softwareBitmap = new SoftwareBitmap(
+                    BitmapPixelFormat.Bgra8,
+                    viewport.ImageWidth,
+                    viewport.ImageHeight,
+                    BitmapAlphaMode.Premultiplied);
 
-                using (var frameBuffer = bitmap.Lock())
-                {
-                    Marshal.Copy(pixelData, 0, frameBuffer.Address, pixelData.Length);
-                }
+                softwareBitmap.CopyFromBuffer(pixelData.AsBuffer());
 
-                FractalImage = bitmap;
+                var source = new SoftwareBitmapSource();
+                await source.SetBitmapAsync(softwareBitmap);
+
+                FractalImageSource = source;
                 stopwatch.Stop();
                 StatusText = $"Generated in {stopwatch.ElapsedMilliseconds} ms";
             }
@@ -140,45 +135,47 @@ public partial class MainViewModel : ObservableObject
         _ = GenerateFractalAsync();
     }
 
-    public void OnPointerPressed(Point position)
+    public void OnPointerPressed(double x, double y)
     {
-        SelectionStart = position;
-        SelectionEnd = position;
+        SelectionStartX = x;
+        SelectionStartY = y;
+        SelectionEndX = x;
+        SelectionEndY = y;
         IsSelecting = true;
     }
 
-    public void OnPointerMoved(Point position)
+    public void OnPointerMoved(double x, double y)
     {
         if (IsSelecting)
         {
-            SelectionEnd = position;
+            SelectionEndX = x;
+            SelectionEndY = y;
         }
     }
 
-    public void OnPointerReleased(Point position)
+    public void OnPointerReleased(double x, double y)
     {
         if (!IsSelecting) return;
 
         IsSelecting = false;
-        SelectionEnd = position;
+        SelectionEndX = x;
+        SelectionEndY = y;
 
-        var rect = SelectionRectangle;
-        if (rect.Width < 10 || rect.Height < 10)
+        if (SelectionRectangleWidth < 10 || SelectionRectangleHeight < 10)
         {
             // Ignore tiny selections
             return;
         }
 
         // Map selection rectangle to Complex Plane
-        var topLeft = CoordinateMapper.PixelToComplex((int)rect.TopLeft.X, (int)rect.TopLeft.Y, _zoomService.CurrentViewport);
-        var bottomRight = CoordinateMapper.PixelToComplex((int)rect.BottomRight.X, (int)rect.BottomRight.Y, _zoomService.CurrentViewport);
+        var topLeft = CoordinateMapper.PixelToComplex((int)SelectionRectangleX, (int)SelectionRectangleY, _zoomService.CurrentViewport);
+        var bottomRight = CoordinateMapper.PixelToComplex((int)(SelectionRectangleX + SelectionRectangleWidth), (int)(SelectionRectangleY + SelectionRectangleHeight), _zoomService.CurrentViewport);
 
-        // Remember Y is inverted in complex plane vs screen coordinates
         var newPlane = new ComplexPlane(
             Math.Min(topLeft.real, bottomRight.real),
             Math.Max(topLeft.real, bottomRight.real),
-            Math.Min(topLeft.imag, bottomRight.imag), // lower imag value
-            Math.Max(topLeft.imag, bottomRight.imag)  // higher imag value
+            Math.Min(topLeft.imag, bottomRight.imag),
+            Math.Max(topLeft.imag, bottomRight.imag)
         );
 
         _zoomService.ZoomTo(newPlane, ViewportWidth, ViewportHeight);
@@ -193,10 +190,8 @@ public partial class MainViewModel : ObservableObject
         ViewportWidth = width;
         ViewportHeight = height;
 
-        // Optionally, maintain current zoom area but adapt aspect ratio, or just reset to new dimensions
-        // For simplicity, we just trigger a redraw with current plane but new dimensions
         var currentPlane = _zoomService.CurrentViewport.Plane;
-        _zoomService.ZoomTo(currentPlane, width, height); // This adds to history, maybe we shouldn't on resize, but it works.
+        _zoomService.ZoomTo(currentPlane, width, height);
         _ = GenerateFractalAsync();
     }
 
