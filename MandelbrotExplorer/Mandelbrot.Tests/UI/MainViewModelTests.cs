@@ -1,4 +1,4 @@
-using Avalonia;
+using System;
 using FluentAssertions;
 using Mandelbrot.Core.Models;
 using Mandelbrot.Core.Services;
@@ -23,15 +23,15 @@ public class MainViewModelTests
         var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object);
 
         // Act
-        vm.OnPointerPressed(new Point(10, 10));
-        vm.OnPointerMoved(new Point(50, 50));
+        vm.OnPointerPressed(10, 10);
+        vm.OnPointerMoved(50, 50);
 
         // Assert
         vm.IsSelecting.Should().BeTrue();
-        vm.SelectionRectangle.Width.Should().Be(40);
-        vm.SelectionRectangle.Height.Should().Be(40);
-        vm.SelectionRectangle.X.Should().Be(10);
-        vm.SelectionRectangle.Y.Should().Be(10);
+        vm.SelectionRectangleWidth.Should().Be(40);
+        vm.SelectionRectangleHeight.Should().Be(40);
+        vm.SelectionRectangleX.Should().Be(10);
+        vm.SelectionRectangleY.Should().Be(10);
     }
 
     [Fact]
@@ -46,11 +46,11 @@ public class MainViewModelTests
         vm.ViewportWidth = 100;
         vm.ViewportHeight = 100;
 
-        vm.OnPointerPressed(new Point(10, 10));
-        vm.OnPointerMoved(new Point(50, 50));
+        vm.OnPointerPressed(10, 10);
+        vm.OnPointerMoved(50, 50);
 
         // Act
-        vm.OnPointerReleased(new Point(50, 50));
+        vm.OnPointerReleased(50, 50);
 
         // Assert
         mockZoomService.Verify(z => z.ZoomTo(It.IsAny<ComplexPlane>(), 100, 100), Times.Once);
