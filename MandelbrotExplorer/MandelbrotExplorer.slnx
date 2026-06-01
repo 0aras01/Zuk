@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Mandelbrot.Core/Mandelbrot.Core.csproj" />
+  <Project Path="Mandelbrot.Compute/Mandelbrot.Compute.csproj" />
+  <Project Path="Mandelbrot.UI.Avalonia/Mandelbrot.UI.Avalonia.csproj" />
+  <Project Path="Mandelbrot.UI.WinUI/Mandelbrot.UI.WinUI.csproj" />
+  <Project Path="Mandelbrot.Tests/Mandelbrot.Tests.csproj" />
+</Solution>
