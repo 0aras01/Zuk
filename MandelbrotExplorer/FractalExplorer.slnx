@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Fractal.Core/Fractal.Core.csproj" />
+  <Project Path="Fractal.UI/Fractal.UI.csproj" />
+  <Project Path="Fractal.Tests/Fractal.Tests.csproj" />
+  <Project Path="Fractal.Compute/Fractal.Compute.csproj" />
+  <Project Path="Fractal.Benchmarks/Fractal.Benchmarks.csproj" />
+</Solution>
