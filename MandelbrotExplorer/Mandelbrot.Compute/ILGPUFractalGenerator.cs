@@ -12,7 +12,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 {
     private readonly Context _context;
     private readonly Accelerator _accelerator;
-    private readonly Action<Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble> _kernel;
+    private readonly Action<Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble> _kernel;
 
     public string Name => $"GPU (ILGPU - {_accelerator.Name})";
 
@@ -29,7 +29,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 
         // Compile the kernel for the selected accelerator
         _kernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble>(MandelbrotKernel);
+            Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble>(MandelbrotKernel);
     }
 
     /// <summary>
@@ -42,6 +42,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         int width,
         int height,
         int maxIterations,
+        int paletteId,
         DoubleDouble realMin,
         DoubleDouble realMax,
         DoubleDouble imagMin,
@@ -68,30 +69,34 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
             iterations++;
         }
 
+        double smoothIter = maxIterations;
+        if (iterations < maxIterations)
+        {
+            double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / 0.6931471805599453) / 0.6931471805599453;
+            if (smoothIter < 0.0) smoothIter = 0.0;
+        }
+
         int offset = index * 4;
 
-        if (iterations == maxIterations)
+        byte r, g, b;
+        if (smoothIter >= maxIterations)
         {
-            output[offset] = 0;     // B
-            output[offset + 1] = 0; // G
-            output[offset + 2] = 0; // R
-            output[offset + 3] = 255; // A
+            r = 0; g = 0; b = 0;
         }
         else
         {
-            double t = (double)iterations / maxIterations;
-            byte r = (byte)(9 * (1 - t) * t * t * t * 255);
-            byte g = (byte)(15 * (1 - t) * (1 - t) * t * t * 255);
-            byte b = (byte)(8.5 * (1 - t) * (1 - t) * (1 - t) * t * 255);
-
-            output[offset] = b;
-            output[offset + 1] = g;
-            output[offset + 2] = r;
-            output[offset + 3] = 255;
+            double t = smoothIter / maxIterations;
+            MandelbrotCalculator.GetColor(t, paletteId, out r, out g, out b);
         }
+
+        output[offset] = b;
+        output[offset + 1] = g;
+        output[offset + 2] = r;
+        output[offset + 3] = 255;
     }
 
-    public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, CancellationToken ct)
+    public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, CancellationToken ct)
     {
         // Run ILGPU pipeline asynchronously
         return Task.Run(() =>
@@ -112,6 +117,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
                 viewport.ImageWidth,
                 viewport.ImageHeight,
                 maxIterations,
+                paletteId,
                 viewport.Plane.RealMin,
                 viewport.Plane.RealMax,
                 viewport.Plane.ImagMin,

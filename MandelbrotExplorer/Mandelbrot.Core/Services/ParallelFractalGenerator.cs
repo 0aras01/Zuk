@@ -10,7 +10,7 @@ public class ParallelFractalGenerator : IFractalGenerator
 
     public bool IsGpuAccelerated => false;
 
-    public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, CancellationToken ct)
+    public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, CancellationToken ct)
     {
         return Task.Run(() =>
         {
@@ -27,22 +27,18 @@ public class ParallelFractalGenerator : IFractalGenerator
                     if (ct.IsCancellationRequested) return;
 
                     var (real, imag) = CoordinateMapper.PixelToComplex(x, y, viewport);
-                    int iterations = MandelbrotCalculator.ComputeIterations(real, imag, maxIterations);
+                    double smoothIter = MandelbrotCalculator.ComputeSmoothIterations(real, imag, maxIterations);
 
-                    // Map iterations to a color (BGRA)
-                    // Simple grayscale/hue for now, can be extracted to an IPalette service later.
                     byte r, g, b;
-                    if (iterations == maxIterations)
+                    if (smoothIter >= maxIterations)
                     {
                         r = 0; g = 0; b = 0; // Inside set = Black
                     }
                     else
                     {
-                        // A simple continuous coloring or repeating palette
-                        double t = (double)iterations / maxIterations;
-                        r = (byte)(9 * (1 - t) * t * t * t * 255);
-                        g = (byte)(15 * (1 - t) * (1 - t) * t * t * 255);
-                        b = (byte)(8.5 * (1 - t) * (1 - t) * (1 - t) * t * 255);
+                        // Map smooth iterations value to [0.0, 1.0] and get cosine color
+                        double t = smoothIter / maxIterations;
+                        MandelbrotCalculator.GetColor(t, paletteId, out r, out g, out b);
                     }
 
                     int offset = (y * width + x) * 4;

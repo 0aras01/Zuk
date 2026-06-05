@@ -95,6 +95,11 @@
                            VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="Palette:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
+                    <ComboBox ItemsSource="{Binding Palettes}"
+                              SelectedItem="{Binding SelectedPalette}"
+                              Width="140"
+                              VerticalAlignment="Center" />
                     <Button Content="Zoom Out"
                             Command="{Binding ZoomOutCommand}"
                             IsEnabled="{Binding CanZoomOut}" />

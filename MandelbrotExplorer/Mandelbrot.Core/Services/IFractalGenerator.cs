@@ -22,5 +22,5 @@ public interface IFractalGenerator
     /// <summary>
     /// Generates a byte array of pixel data (BGRA32 format) for the given viewport.
     /// </summary>
-    Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, CancellationToken ct);
+    Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, CancellationToken ct);
 }

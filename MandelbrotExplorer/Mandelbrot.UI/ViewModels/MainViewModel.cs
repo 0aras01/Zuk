@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -53,6 +54,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _zoomText = "";
 
+    public List<string> Palettes { get; } = ["Sunset (Fire)", "Ice (Blue)", "Rainbow", "Forest (Green)"];
+
+    [ObservableProperty]
+    private string _selectedPalette = "Sunset (Fire)";
+
     [ObservableProperty]
     private bool _isSelecting;
 
@@ -106,6 +112,11 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectionRectangle));
     }
 
+    partial void OnSelectedPaletteChanged(string value)
+    {
+        _ = GenerateFractalAsync();
+    }
+
     [RelayCommand]
     private async Task GenerateFractalAsync()
     {
@@ -128,7 +139,15 @@ public partial class MainViewModel : ObservableObject
                 ? _cpuGenerator
                 : _gpuGenerator;
 
-            byte[] pixelData = await activeGenerator.GenerateAsync(viewport, iterations, token);
+            int paletteId = SelectedPalette switch
+            {
+                "Ice (Blue)" => 2,
+                "Rainbow" => 3,
+                "Forest (Green)" => 4,
+                _ => 1 // Sunset (Fire)
+            };
+
+            byte[] pixelData = await activeGenerator.GenerateAsync(viewport, iterations, paletteId, token);
             stopwatch.Stop();
 
             if (!token.IsCancellationRequested)
