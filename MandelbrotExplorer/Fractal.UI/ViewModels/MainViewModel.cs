@@ -727,13 +727,23 @@ public partial class MainViewModel : ObservableObject
 
     private void RequestRender()
     {
+        TaskScheduler scheduler;
+        try
+        {
+            scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+        }
+        catch
+        {
+            scheduler = TaskScheduler.Default;
+        }
+
         _ = GenerateFractalAsync().ContinueWith(t =>
         {
             if (t.IsFaulted && t.Exception != null)
             {
                 StatusText = $"Error: {t.Exception.InnerException?.Message}";
             }
-        }, TaskScheduler.FromCurrentSynchronizationContext());
+        }, scheduler);
     }
 }
 
