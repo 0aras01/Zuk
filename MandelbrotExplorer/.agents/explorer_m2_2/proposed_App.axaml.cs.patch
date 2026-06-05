@@ -1,0 +1,55 @@
+diff --git a/Fractal.UI/App.axaml.cs b/Fractal.UI/App.axaml.cs
+index d1b8bb1..527bfcc 100644
+--- a/Fractal.UI/App.axaml.cs
++++ b/Fractal.UI/App.axaml.cs
+@@ -6,5 +6,6 @@ using Fractal.UI.ViewModels;
+ using Fractal.UI.Views;
+ using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging;
+ using System;
+ 
+ namespace Fractal.UI;
+@@ -25,24 +26,38 @@ public partial class App : Application
+     public override void OnFrameworkInitializationCompleted()
+     {
+         // Dependency Injection Setup
+         var collection = new ServiceCollection();
+ 
++        // Logging Configuration
++        collection.AddLogging(builder =>
++        {
++            builder.AddConsole();
++            builder.AddDebug();
++            builder.SetMinimumLevel(LogLevel.Information);
++        });
++
+         // Try GPU acceleration first, fall back to CPU if unavailable
+         collection.AddSingleton<IFractalGenerator>(sp =>
+         {
++            var logger = sp.GetRequiredService<ILogger<App>>();
+             try
+             {
+                 var gpu = new ILGPUFractalGenerator();
+-                Console.WriteLine($"[Fractal] GPU acceleration initialized: {gpu.Name}");
++                logger.LogInformation("GPU acceleration initialized: {GpuName}", gpu.Name);
+                 return gpu;
+             }
+             catch (Exception ex)
+             {
+-                Console.WriteLine($"[Fractal] GPU initialization failed ({ex.Message}), falling back to CPU.");
++                logger.LogError(ex, "GPU initialization failed, falling back to CPU.");
+                 return new ParallelFractalGenerator();
+             }
+         });
+ 
+         collection.AddSingleton<IZoomService, ZoomService>();
+         collection.AddSingleton<BookmarkService>();
+-        collection.AddTransient<MainViewModel>();
++
++        // ViewModel Registrations
++        collection.AddTransient<NavigationViewModel>();
++        collection.AddTransient<DiagnosticsViewModel>();
++        collection.AddTransient<RenderingViewModel>();
++        collection.AddTransient<MainViewModel>();
+ 
+         Services = collection.BuildServiceProvider();

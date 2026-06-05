@@ -1,0 +1,2 @@
+## 2026-06-05T17:22:11Z
+Analyze the Fractal Explorer codebase. Check if 'dotnet build' and 'dotnet test' compile and pass. Examine the monolithic MainViewModel.cs, MainWindow.axaml, MainWindow.axaml.cs, and MainViewModelTests.cs. Suggest a detailed refactoring strategy to split MainViewModel into NavigationViewModel, DiagnosticsViewModel, and RenderingViewModel, and integrate Microsoft.Extensions.Logging. Write your report to handoff.md in your working directory.

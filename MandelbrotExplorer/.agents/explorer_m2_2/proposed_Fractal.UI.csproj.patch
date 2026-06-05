@@ -1,0 +1,14 @@
+diff --git a/Fractal.UI/Fractal.UI.csproj b/Fractal.UI/Fractal.UI.csproj
+index 455aa51..0cbe6a8 100644
+--- a/Fractal.UI/Fractal.UI.csproj
++++ b/Fractal.UI/Fractal.UI.csproj
+@@ -23,6 +23,9 @@
+     </PackageReference>
+     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
++    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
++    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.8" />
++    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.8" />
+   </ItemGroup>
+ 
+   <ItemGroup>
