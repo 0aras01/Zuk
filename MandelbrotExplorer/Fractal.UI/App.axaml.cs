@@ -43,12 +43,19 @@ public partial class App : Application
         });
 
         collection.AddSingleton<IZoomService, ZoomService>();
+        collection.AddSingleton<BookmarkService>();
         collection.AddTransient<MainViewModel>();
 
         Services = collection.BuildServiceProvider();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            desktop.ShutdownRequested += (_, _) =>
+            {
+                if (Services is IDisposable disposable)
+                    disposable.Dispose();
+            };
+
             desktop.MainWindow = new MainWindow
             {
                 DataContext = Services.GetRequiredService<MainViewModel>()

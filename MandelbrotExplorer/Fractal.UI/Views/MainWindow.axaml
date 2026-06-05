@@ -1,31 +1,32 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Fractal.UI.ViewModels"
+        xmlns:models="using:Fractal.Core.Models"
+        xmlns:services="using:Fractal.UI.Services"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="650"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="Fractal.UI.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Fractal Explorer">
+        Title="{Binding [AppName], Source={x:Static services:LocalizationService.Instance}}"
+        KeyDown="Window_KeyDown"
+        Background="Black">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainViewModel/>
     </Design.DataContext>
 
-    <Grid RowDefinitions="*, Auto">
-
-        <!-- Viewport -->
-        <Canvas Grid.Row="0"
+    <Grid>
+        <!-- Viewport Canvas (fills the entire window) -->
+        <Canvas Name="ViewportCanvas"
                 Background="Black"
-                Name="ViewportCanvas"
                 PointerPressed="ViewportCanvas_PointerPressed"
                 PointerMoved="ViewportCanvas_PointerMoved"
                 PointerReleased="ViewportCanvas_PointerReleased"
                 SizeChanged="ViewportCanvas_OnSizeChanged"
-                ClipToBounds="True">
+                ClipToBounds="True"
+                PointerWheelChanged="ViewportCanvas_PointerWheelChanged">
 
             <Image Source="{Binding FractalImage}"
                    Width="{Binding ViewportWidth}"
@@ -42,87 +43,276 @@
                        StrokeThickness="2"
                        StrokeDashArray="4,4"
                        Fill="#40FFFFFF" />
+        </Canvas>
 
-            <!-- Computation Diagnostics Panel -->
-            <Border Canvas.Left="15"
-                    Canvas.Top="15"
-                    Background="#D01E1E1E"
-                    BorderBrush="#40FFFFFF"
+        <!-- Floating UI Overlays Container (HitTest is transparent so clicks pass through to Canvas) -->
+        <Grid RowDefinitions="*, Auto" ColumnDefinitions="*, Auto">
+            
+            <!-- Left Side Panel: Diagnostics (floating on top left) -->
+            <Border Grid.Row="0" Grid.Column="0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Margin="15,15,0,0"
+                    Width="320"
+                    Background="#E5181818"
+                    BorderBrush="#25FFFFFF"
                     BorderThickness="1"
                     CornerRadius="8"
+                    BoxShadow="0 4 15 0 #90000000"
                     Padding="12"
-                    Width="320"
-                    IsHitTestVisible="False">
+                    IsHitTestVisible="False"
+                    IsVisible="{Binding IsDiagnosticsVisible}">
                 <StackPanel Spacing="6">
-                    <TextBlock Text="DIAGNOSTICS &amp; COMPUTATION" Foreground="#FF9E00" FontSize="10" FontWeight="Bold" LetterSpacing="1"/>
+                    <TextBlock Text="{Binding [DiagnosticsTitle], Source={x:Static services:LocalizationService.Instance}}" 
+                               Foreground="#FF9E00" FontSize="10" FontWeight="Bold" LetterSpacing="1"/>
                     
                     <Separator Margin="0,2" Height="1" Background="#20FFFFFF"/>
                     
-                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="85,*">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Zoom:" Foreground="#A0FFFFFF" FontSize="11"/>
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="95,*">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding [Zoom], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ZoomText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                         
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Engine:" Foreground="#A0FFFFFF" FontSize="11"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding [Engine], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding EngineText}" Foreground="White" FontSize="11"/>
                         
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Iterations:" Foreground="#A0FFFFFF" FontSize="11"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [Iterations], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding IterationsText}" Foreground="White" FontSize="11"/>
                         
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Render Time:" Foreground="#A0FFFFFF" FontSize="11"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding [RenderTime], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
                         <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RenderTimeText}" Foreground="White" FontSize="11"/>
                         
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Resolution:" Foreground="#A0FFFFFF" FontSize="11"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding [Resolution], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ResolutionText}" Foreground="White" FontSize="11"/>
                         
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Span:" Foreground="#A0FFFFFF" FontSize="11"/>
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="{Binding [Span], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
                         <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SpanText}" Foreground="White" FontSize="11" TextWrapping="Wrap"/>
                     </Grid>
 
                     <Separator Margin="0,2" Height="1" Background="#20FFFFFF"/>
                     
-                    <TextBlock Text="Center Coordinates:" Foreground="#A0FFFFFF" FontSize="11"/>
+                    <TextBlock Text="{Binding [CenterCoordinates], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
                     <TextBlock Text="{Binding CenterCoordinatesText}" Foreground="#FFCC00" FontSize="10" FontFamily="Consolas,Monospace" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
-        </Canvas>
 
-        <!-- Status & Controls -->
-        <Border Grid.Row="1" Background="#333333" Padding="10">
-            <Grid ColumnDefinitions="*, Auto">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding StatusText}"
-                           Foreground="White"
-                           VerticalAlignment="Center"/>
+            <!-- Top Right: Small floating hamburger button (only visible when Sidebar is collapsed) -->
+            <Button Grid.Row="0" Grid.Column="1"
+                    Content="≡"
+                    Command="{Binding ToggleSidePanelCommand}"
+                    Width="36" Height="36"
+                    Margin="0,15,15,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Background="#E5181818"
+                    Foreground="White"
+                    BorderBrush="#25FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    FontSize="18"
+                    Padding="0"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    IsVisible="{Binding !IsSidePanelVisible}"/>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="Fractal:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
-                    <ComboBox ItemsSource="{Binding FractalTypes}"
-                              SelectedItem="{Binding SelectedFractalType}"
-                              Width="120"
-                              VerticalAlignment="Center" />
+            <!-- Right Side Panel: Floating Collapsible Control Sidebar -->
+            <Border Grid.Row="0" Grid.Column="1"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Stretch"
+                    Margin="0,15,15,0"
+                    Width="280"
+                    Background="#F0181818"
+                    BorderBrush="#25FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    BoxShadow="0 4 20 0 #A0000000"
+                    Padding="14"
+                    IsVisible="{Binding IsSidePanelVisible}">
+                <Grid RowDefinitions="Auto, *">
+                    <!-- Sidebar Header -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,10">
+                        <TextBlock Grid.Column="0" 
+                                   Text="{Binding [AppName], Source={x:Static services:LocalizationService.Instance}}" 
+                                   Foreground="#FF9E00" FontSize="13" FontWeight="Bold" LetterSpacing="1"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" 
+                                Content="▶" 
+                                Command="{Binding ToggleSidePanelCommand}"
+                                Width="28" Height="28"
+                                Background="Transparent" Foreground="#A0FFFFFF"
+                                BorderBrush="Transparent"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                Padding="0" FontSize="11"/>
+                    </Grid>
 
-                    <!-- Julia Settings -->
-                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsJuliaSettingsVisible}">
-                        <TextBlock Text="Cr:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
-                        <TextBox Text="{Binding JuliaReal}" Width="60" VerticalAlignment="Center" Height="28" Padding="4,2" FontSize="11"/>
-                        <TextBlock Text="Ci:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
-                        <TextBox Text="{Binding JuliaImag}" Width="60" VerticalAlignment="Center" Height="28" Padding="4,2" FontSize="11"/>
-                    </StackPanel>
+                    <!-- Sidebar Content (Scrollable to prevent overflow) -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="12" Margin="0,0,4,0">
+                            
+                            <Separator Height="1" Background="#20FFFFFF"/>
 
-                    <TextBlock Text="Palette:" Foreground="White" VerticalAlignment="Center" FontSize="12"/>
-                    <ComboBox ItemsSource="{Binding Palettes}"
-                              SelectedItem="{Binding SelectedPalette}"
-                              Width="120"
-                              VerticalAlignment="Center" />
-                    <Button Content="Zoom Out"
-                            Command="{Binding ZoomOutCommand}"
-                            IsEnabled="{Binding CanZoomOut}" />
-                    <Button Content="Reset"
-                            Command="{Binding ResetCommand}" />
-                    <Button Content="Save Image"
-                            Command="{Binding SaveImageCommand}" />
-                </StackPanel>
-            </Grid>
-        </Border>
+                            <!-- Language & Settings -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Language], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
+                                <ComboBox ItemsSource="{Binding Languages}"
+                                          SelectedItem="{Binding SelectedLanguage}"
+                                          HorizontalAlignment="Stretch"
+                                          Height="30" />
+                            </StackPanel>
+
+                            <!-- Diagnostics Toggle -->
+                            <CheckBox IsChecked="{Binding IsDiagnosticsVisible}"
+                                      Content="{Binding [DiagnosticsToggle], Source={x:Static services:LocalizationService.Instance}}"
+                                      Foreground="White" FontSize="12" Margin="0,4,0,0"/>
+
+                            <Separator Height="1" Background="#20FFFFFF"/>
+
+                            <!-- Fractal Selector -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Fractal], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
+                                <ComboBox ItemsSource="{Binding FractalTypes}"
+                                          SelectedItem="{Binding SelectedFractalType}"
+                                          HorizontalAlignment="Stretch"
+                                          Height="30" />
+                            </StackPanel>
+
+                            <!-- Julia Parameters -->
+                            <StackPanel Spacing="6" IsVisible="{Binding IsJuliaSettingsVisible}" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding [JuliaReal], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
+                                <TextBox Text="{Binding JuliaReal}" Height="28" Padding="6,2" FontSize="11" Background="#30000000" BorderBrush="#20FFFFFF"/>
+                                
+                                <TextBlock Text="{Binding [JuliaImag], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
+                                <TextBox Text="{Binding JuliaImag}" Height="28" Padding="6,2" FontSize="11" Background="#30000000" BorderBrush="#20FFFFFF"/>
+                            </StackPanel>
+
+                            <!-- Coloring Palette -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding [Palette], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
+                                <ComboBox ItemsSource="{Binding Palettes}"
+                                          SelectedItem="{Binding SelectedPalette}"
+                                          HorizontalAlignment="Stretch"
+                                          Height="30" />
+                            </StackPanel>
+
+                            <Separator Height="1" Background="#20FFFFFF"/>
+
+                            <!-- Bookmarks / Presets -->
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding [PresetsTitle], Source={x:Static services:LocalizationService.Instance}}" Foreground="#FF9E00" FontSize="11" FontWeight="SemiBold"/>
+                                
+                                <ListBox ItemsSource="{Binding Bookmarks}" 
+                                         SelectedItem="{Binding SelectedBookmark}" 
+                                         Height="120" 
+                                         Background="#30000000" 
+                                         BorderBrush="#20FFFFFF" 
+                                         BorderThickness="1" 
+                                         CornerRadius="4"
+                                         Padding="2">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="models:BookmarkEntry">
+                                            <Grid ColumnDefinitions="*, Auto">
+                                                <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                                <Button Grid.Column="1" 
+                                                        Content="✖" 
+                                                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteBookmarkCommand}" 
+                                                        CommandParameter="{Binding}"
+                                                        Background="Transparent" Foreground="#FF4444" 
+                                                        FontSize="9" Padding="4,2" 
+                                                        BorderBrush="Transparent"
+                                                        Margin="4,0,0,0"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <!-- Add Bookmark form -->
+                                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="6">
+                                    <TextBox Grid.Column="0" 
+                                             PlaceholderText="{Binding [BookmarkNamePrompt], Source={x:Static services:LocalizationService.Instance}}" 
+                                             Text="{Binding NewBookmarkName}" 
+                                             Height="28" Padding="6,2" FontSize="11" 
+                                             Background="#30000000" BorderBrush="#20FFFFFF"/>
+                                    <Button Grid.Column="1" 
+                                            Content="+" 
+                                            Command="{Binding AddBookmarkCommand}"
+                                            Width="28" Height="28"
+                                            Background="#E03C3C3C" Foreground="White"
+                                            BorderBrush="#25FFFFFF" BorderThickness="1"
+                                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                            Padding="0"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Separator Height="1" Background="#20FFFFFF"/>
+
+                            <!-- Actions -->
+                            <StackPanel Spacing="8">
+                                <Button Content="{Binding [PlayAnimation], Source={x:Static services:LocalizationService.Instance}}"
+                                        Command="{Binding ToggleAnimationCommand}"
+                                        IsVisible="{Binding !IsAnimating}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                <Button Content="{Binding [StopAnimation], Source={x:Static services:LocalizationService.Instance}}"
+                                        Command="{Binding ToggleAnimationCommand}"
+                                        IsVisible="{Binding IsAnimating}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        Background="#80FF4444"/>
+                                <Button Content="{Binding [ZoomOut], Source={x:Static services:LocalizationService.Instance}}"
+                                        Command="{Binding ZoomOutCommand}"
+                                        IsEnabled="{Binding CanZoomOut}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                <Button Content="{Binding [Reset], Source={x:Static services:LocalizationService.Instance}}"
+                                        Command="{Binding ResetCommand}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                <Button Content="{Binding [SaveImage], Source={x:Static services:LocalizationService.Instance}}"
+                                        Command="{Binding SaveImageCommand}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                <Button Content="{Binding [CopyToClipboard], Source={x:Static services:LocalizationService.Instance}}"
+                                        Command="{Binding CopyToClipboardCommand}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- Bottom Floating Panel: Coordinates & Status (spans bottom width) -->
+            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                    Margin="15"
+                    Height="36"
+                    Background="#E5151515"
+                    BorderBrush="#25FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    BoxShadow="0 4 12 0 #80000000"
+                    Padding="12,0"
+                    VerticalAlignment="Bottom">
+                <Grid ColumnDefinitions="Auto, *, Auto">
+                    <!-- Coordinates under cursor -->
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding CursorCoordinatesText}"
+                               Foreground="#FFCC00"
+                               FontFamily="Consolas,Monospace"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               MinWidth="220"/>
+                    
+                    <!-- App Status Message -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding StatusText}"
+                               Foreground="White"
+                               FontSize="11"
+                               Margin="15,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               TextTrimming="CharacterEllipsis"/>
+
+                    <!-- Keyboard help hint -->
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding [SidePanelToggle], Source={x:Static services:LocalizationService.Instance}}"
+                               Foreground="#80FFFFFF"
+                               FontSize="10"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

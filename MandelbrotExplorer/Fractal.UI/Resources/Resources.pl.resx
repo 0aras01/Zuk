@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="0" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="2" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  
+  <data name="AppName" xml:space="preserve">
+    <value>Eksplorator Fraktali</value>
+  </data>
+  <data name="DiagnosticsTitle" xml:space="preserve">
+    <value>DIAGNOSTYKA I OBLICZENIA</value>
+  </data>
+  <data name="Zoom" xml:space="preserve">
+    <value>Przybliżenie:</value>
+  </data>
+  <data name="Engine" xml:space="preserve">
+    <value>Silnik:</value>
+  </data>
+  <data name="Iterations" xml:space="preserve">
+    <value>Iteracje:</value>
+  </data>
+  <data name="RenderTime" xml:space="preserve">
+    <value>Czas renderowania:</value>
+  </data>
+  <data name="Resolution" xml:space="preserve">
+    <value>Rozdzielczość:</value>
+  </data>
+  <data name="Span" xml:space="preserve">
+    <value>Rozpiętość:</value>
+  </data>
+  <data name="CenterCoordinates" xml:space="preserve">
+    <value>Współrzędne środka:</value>
+  </data>
+  <data name="Fractal" xml:space="preserve">
+    <value>Fraktal:</value>
+  </data>
+  <data name="Palette" xml:space="preserve">
+    <value>Paleta:</value>
+  </data>
+  <data name="ZoomOut" xml:space="preserve">
+    <value>Oddal</value>
+  </data>
+  <data name="Reset" xml:space="preserve">
+    <value>Resetuj</value>
+  </data>
+  <data name="SaveImage" xml:space="preserve">
+    <value>Zapisz obraz</value>
+  </data>
+  <data name="CopyToClipboard" xml:space="preserve">
+    <value>Kopiuj do schowka</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Język:</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>Gotowy</value>
+  </data>
+  <data name="StatusGenerating" xml:space="preserve">
+    <value>Generowanie...</value>
+  </data>
+  <data name="StatusError" xml:space="preserve">
+    <value>Błąd:</value>
+  </data>
+  <data name="StatusClipboardCopied" xml:space="preserve">
+    <value>Obraz skopiowany do schowka</value>
+  </data>
+  <data name="StatusClipboardError" xml:space="preserve">
+    <value>Błąd schowka:</value>
+  </data>
+  <data name="StatusSavedTo" xml:space="preserve">
+    <value>Zapisano jako</value>
+  </data>
+  <data name="DiagnosticsToggle" xml:space="preserve">
+    <value>Pokaż diagnostykę</value>
+  </data>
+  <data name="JuliaReal" xml:space="preserve">
+    <value>Rzecz. (Cr):</value>
+  </data>
+  <data name="JuliaImag" xml:space="preserve">
+    <value>Uroj. (Ci):</value>
+  </data>
+  <data name="SidePanelToggle" xml:space="preserve">
+    <value>Panel boczny (Tab)</value>
+  </data>
+  <data name="PresetsTitle" xml:space="preserve">
+    <value>Zakładki / Zapisane</value>
+  </data>
+  <data name="AddBookmark" xml:space="preserve">
+    <value>Dodaj zakładkę</value>
+  </data>
+  <data name="DeleteBookmark" xml:space="preserve">
+    <value>Usuń</value>
+  </data>
+  <data name="BookmarkNamePrompt" xml:space="preserve">
+    <value>Wpisz nazwę zakładki:</value>
+  </data>
+  <data name="InvalidJuliaError" xml:space="preserve">
+    <value>Błędne parametry Julii!</value>
+  </data>
+  <data name="PlayAnimation" xml:space="preserve">
+    <value>Auto-przybliżenie</value>
+  </data>
+  <data name="StopAnimation" xml:space="preserve">
+    <value>Zatrzymaj</value>
+  </data>
+</root>

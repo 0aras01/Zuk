@@ -17,6 +17,11 @@ public class MainViewModelTests
         var mock = new Mock<IFractalGenerator>();
         mock.Setup(g => g.Name).Returns("Test Generator");
         mock.Setup(g => g.IsGpuAccelerated).Returns(false);
+        mock.Setup(g => g.GenerateAsync(
+                It.IsAny<Viewport>(), It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<FractalSettings>(), It.IsAny<CancellationToken>()))
+            .Returns<Viewport, int, int, FractalSettings, CancellationToken>(
+                (v, _, _, _, _) => Task.FromResult(new byte[v.ImageWidth * v.ImageHeight * 4]));
         return mock;
     }
 
@@ -28,7 +33,7 @@ public class MainViewModelTests
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(0, 1, 0, 1), 800, 600));
 
-        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object);
+        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object, new BookmarkService());
 
         // Act
         vm.OnPointerPressed(new Point(10, 10));
@@ -50,7 +55,7 @@ public class MainViewModelTests
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(0, 100, 0, 100), 100, 100)); // 1 to 1 mapping
 
-        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object);
+        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object, new BookmarkService());
         vm.ViewportWidth = 100;
         vm.ViewportHeight = 100;
 
@@ -73,7 +78,7 @@ public class MainViewModelTests
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(-2, 1, -1, 1), 800, 600));
 
-        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object);
+        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object, new BookmarkService());
 
         // Act
         vm.OnSizeChanged(1024, 768);

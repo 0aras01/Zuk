@@ -18,6 +18,19 @@ public class ParallelFractalGenerator : IFractalGenerator
             int height = viewport.ImageHeight;
             byte[] pixels = new byte[width * height * 4];
 
+            DoubleDouble centerReal = (viewport.Plane.RealMin + viewport.Plane.RealMax) * 0.5;
+            DoubleDouble centerImag = (viewport.Plane.ImagMin + viewport.Plane.ImagMax) * 0.5;
+
+            DoubleDouble[]? refRe = null;
+            DoubleDouble[]? refIm = null;
+            int refEscapeIter = maxIterations;
+            bool usePerturbation = (settings.Type == FractalType.Mandelbrot || settings.Type == FractalType.Julia);
+
+            if (usePerturbation)
+            {
+                (refRe, refIm, refEscapeIter) = PerturbationEngine.PrecalculateReferenceOrbit(centerReal, centerImag, maxIterations, settings);
+            }
+
             ParallelOptions options = new ParallelOptions { CancellationToken = ct };
 
             Parallel.For(0, height, options, y =>
@@ -27,7 +40,17 @@ public class ParallelFractalGenerator : IFractalGenerator
                     if (ct.IsCancellationRequested) return;
 
                     var (real, imag) = CoordinateMapper.PixelToComplex(x, y, viewport);
-                    double smoothIter = FractalCalculator.ComputeSmoothIterations(real, imag, maxIterations, settings);
+                    
+                    double smoothIter;
+                    if (usePerturbation && refRe != null && refIm != null)
+                    {
+                        smoothIter = PerturbationEngine.ComputeSmoothIterations(
+                            real, imag, centerReal, centerImag, refRe, refIm, refEscapeIter, maxIterations, settings);
+                    }
+                    else
+                    {
+                        smoothIter = FractalCalculator.ComputeSmoothIterations(real, imag, maxIterations, settings);
+                    }
 
                     byte r, g, b;
                     if (smoothIter >= maxIterations)

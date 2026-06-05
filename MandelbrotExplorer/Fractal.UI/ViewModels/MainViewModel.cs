@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -12,6 +14,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fractal.Core.Models;
 using Fractal.Core.Services;
+using Fractal.UI.Services;
 
 namespace Fractal.UI.ViewModels;
 
@@ -20,7 +23,12 @@ public partial class MainViewModel : ObservableObject
     private readonly IFractalGenerator _gpuGenerator;
     private readonly IFractalGenerator _cpuGenerator = new ParallelFractalGenerator();
     private readonly IZoomService _zoomService;
+    private readonly BookmarkService _bookmarkService;
     private CancellationTokenSource? _cts;
+
+    // Pan debounce timer — prevents re-rendering on every mouse move during drag
+    private Timer? _panDebounceTimer;
+    private const int PanDebounceMs = 50;
 
     // Adaptive iteration budget — targets ~100ms render time
     private const double TargetRenderMs = 100.0;
@@ -28,11 +36,22 @@ public partial class MainViewModel : ObservableObject
     private const int MaxIterations = 50_000;
     private int _adaptiveIterations = 500;
 
+    // Buffer reuse — avoids allocating new arrays/bitmaps when dimensions haven't changed
+    private byte[]? _pixelBuffer;
+    private WriteableBitmap? _reusableBitmap;
+    private int _lastWidth, _lastHeight;
+
     [ObservableProperty]
     private WriteableBitmap? _fractalImage;
 
     [ObservableProperty]
     private string _statusText = "Ready";
+
+    [ObservableProperty]
+    private string _cursorCoordinatesText = "";
+
+    [ObservableProperty]
+    private bool _isDiagnosticsVisible = true;
 
     [ObservableProperty]
     private string _centerCoordinatesText = "";
@@ -55,15 +74,15 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _zoomText = "";
 
-    public List<string> Palettes { get; } = ["Sunset (Fire)", "Ice (Blue)", "Rainbow", "Forest (Green)"];
+    public PaletteType[] Palettes { get; } = Enum.GetValues<PaletteType>();
 
     [ObservableProperty]
-    private string _selectedPalette = "Sunset (Fire)";
+    private PaletteType _selectedPalette = PaletteType.Sunset;
 
-    public List<string> FractalTypes { get; } = ["Mandelbrot", "Julia", "Burning Ship", "Tricorn", "Celtic", "Buffalo", "Multibrot 3"];
+    public FractalType[] FractalTypes { get; } = Enum.GetValues<FractalType>();
 
     [ObservableProperty]
-    private string _selectedFractalType = "Mandelbrot";
+    private FractalType _selectedFractalType = FractalType.Mandelbrot;
 
     [ObservableProperty]
     private string _juliaReal = "-0.7";
@@ -92,12 +111,44 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _canZoomOut;
 
+    /// <summary>
+    /// Delegate set from code-behind to copy the current FractalImage to clipboard.
+    /// </summary>
+    public Func<Task>? CopyToClipboardAction { get; set; }
+
+    /// <summary>
+    /// Delegate set from code-behind to show a save-file dialog and return the chosen path.
+    /// Returns null if the user cancelled.
+    /// </summary>
+    public Func<Task<string?>>? SaveFileDialogAction { get; set; }
+
+    /// <summary>
+    /// Delegate set from code-behind to toggle the window's fullscreen state.
+    /// </summary>
+    public Action? ToggleFullscreenAction { get; set; }
+
     // Viewport dimensions, bound to the Canvas/Image size
     [ObservableProperty]
     private int _viewportWidth = 800;
 
     [ObservableProperty]
     private int _viewportHeight = 600;
+
+    public ObservableCollection<BookmarkEntry> Bookmarks { get; }
+
+    [ObservableProperty]
+    private BookmarkEntry? _selectedBookmark;
+
+    [ObservableProperty]
+    private string _newBookmarkName = "";
+
+    public string[] Languages { get; } = new[] { "EN", "PL" };
+
+    [ObservableProperty]
+    private string _selectedLanguage = "EN";
+
+    [ObservableProperty]
+    private bool _isSidePanelVisible = true;
 
     public Rect SelectionRectangle => new Rect(
         Math.Min(SelectionStart.X, SelectionEnd.X),
@@ -106,13 +157,19 @@ public partial class MainViewModel : ObservableObject
         Math.Abs(SelectionEnd.Y - SelectionStart.Y)
     );
 
-    public MainViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService)
+    public MainViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService, BookmarkService bookmarkService)
     {
         _gpuGenerator = fractalGenerator;
         _zoomService = zoomService;
+        _bookmarkService = bookmarkService;
         _zoomService.Reset(ViewportWidth, ViewportHeight);
+
+        // Load Bookmarks and select language
+        Bookmarks = new ObservableCollection<BookmarkEntry>(_bookmarkService.LoadBookmarks());
+        _selectedLanguage = LocalizationService.Instance.CurrentCulture.Name.StartsWith("pl", StringComparison.OrdinalIgnoreCase) ? "PL" : "EN";
+
         UpdateCanZoomOut();
-        _ = GenerateFractalAsync();
+        RequestRender();
     }
 
     // Default constructor for designer
@@ -120,7 +177,10 @@ public partial class MainViewModel : ObservableObject
     {
         _gpuGenerator = new ParallelFractalGenerator();
         _zoomService = new ZoomService();
+        _bookmarkService = new BookmarkService();
         _zoomService.Reset(ViewportWidth, ViewportHeight);
+
+        Bookmarks = new ObservableCollection<BookmarkEntry>(_bookmarkService.LoadBookmarks());
     }
 
     partial void OnSelectionStartChanged(Point value)
@@ -133,25 +193,90 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectionRectangle));
     }
 
-    partial void OnSelectedPaletteChanged(string value)
+    partial void OnSelectedPaletteChanged(PaletteType value)
     {
-        _ = GenerateFractalAsync();
+        RequestRender();
     }
 
-    partial void OnSelectedFractalTypeChanged(string value)
+    partial void OnSelectedFractalTypeChanged(FractalType value)
     {
-        IsJuliaSettingsVisible = value == "Julia";
-        _ = GenerateFractalAsync();
+        IsJuliaSettingsVisible = value == FractalType.Julia;
+        RequestRender();
     }
 
     partial void OnJuliaRealChanged(string value)
     {
-        _ = GenerateFractalAsync();
+        RequestRender();
     }
 
     partial void OnJuliaImagChanged(string value)
     {
-        _ = GenerateFractalAsync();
+        RequestRender();
+    }
+
+    partial void OnSelectedBookmarkChanged(BookmarkEntry? value)
+    {
+        if (value == null) return;
+        
+        SelectedFractalType = value.FractalType;
+        SelectedPalette = value.Palette;
+        _adaptiveIterations = value.Iterations;
+        
+        if (value.FractalType == FractalType.Julia)
+        {
+            JuliaReal = value.JuliaCReal.ToString(CultureInfo.InvariantCulture);
+            JuliaImag = value.JuliaCImag.ToString(CultureInfo.InvariantCulture);
+        }
+        
+        _zoomService.ZoomTo(value.Plane, ViewportWidth, ViewportHeight);
+        UpdateCanZoomOut();
+        RequestRender();
+    }
+
+    partial void OnSelectedLanguageChanged(string value)
+    {
+        LocalizationService.Instance.CurrentCulture = value == "PL" 
+            ? new CultureInfo("pl") 
+            : new CultureInfo("en");
+    }
+
+    partial void OnNewBookmarkNameChanged(string value)
+    {
+        AddBookmarkCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanAddBookmark))]
+    private void AddBookmark()
+    {
+        if (string.IsNullOrWhiteSpace(NewBookmarkName)) return;
+        var viewport = _zoomService.CurrentViewport;
+        var entry = new BookmarkEntry
+        {
+            Name = NewBookmarkName.Trim(),
+            FractalType = SelectedFractalType,
+            Plane = viewport.Plane,
+            Palette = SelectedPalette,
+            Iterations = _adaptiveIterations,
+            JuliaCReal = (double)GetJuliaCReal(),
+            JuliaCImag = (double)GetJuliaCImag()
+        };
+        Bookmarks.Add(entry);
+        _bookmarkService.SaveBookmarks(new List<BookmarkEntry>(Bookmarks));
+        NewBookmarkName = "";
+    }
+
+    private bool CanAddBookmark() => !string.IsNullOrWhiteSpace(NewBookmarkName);
+
+    [RelayCommand]
+    private void DeleteBookmark(BookmarkEntry? bookmark)
+    {
+        if (bookmark == null) return;
+        Bookmarks.Remove(bookmark);
+        _bookmarkService.SaveBookmarks(new List<BookmarkEntry>(Bookmarks));
+        if (SelectedBookmark == bookmark)
+        {
+            SelectedBookmark = null;
+        }
     }
 
     private DoubleDouble GetJuliaCReal()
@@ -190,48 +315,42 @@ public partial class MainViewModel : ObservableObject
                 ? _cpuGenerator
                 : _gpuGenerator;
 
-            int paletteId = SelectedPalette switch
-            {
-                "Ice (Blue)" => 2,
-                "Rainbow" => 3,
-                "Forest (Green)" => 4,
-                _ => 1 // Sunset (Fire)
-            };
-
-            FractalType type = SelectedFractalType switch
-            {
-                "Julia" => FractalType.Julia,
-                "Burning Ship" => FractalType.BurningShip,
-                "Tricorn" => FractalType.Tricorn,
-                "Celtic" => FractalType.Celtic,
-                "Buffalo" => FractalType.Buffalo,
-                "Multibrot 3" => FractalType.Multibrot3,
-                _ => FractalType.Mandelbrot
-            };
+            int paletteId = (int)SelectedPalette;
 
             var settings = new FractalSettings(
-                type,
+                SelectedFractalType,
                 GetJuliaCReal(),
                 GetJuliaCImag()
             );
+
+            // Reuse pixel buffer if dimensions haven't changed
+            int requiredBytes = viewport.ImageWidth * viewport.ImageHeight * 4;
+            if (_pixelBuffer == null || _pixelBuffer.Length != requiredBytes)
+                _pixelBuffer = new byte[requiredBytes];
 
             byte[] pixelData = await activeGenerator.GenerateAsync(viewport, iterations, paletteId, settings, token);
             stopwatch.Stop();
 
             if (!token.IsCancellationRequested)
             {
-                var bitmap = new WriteableBitmap(
-                    new PixelSize(viewport.ImageWidth, viewport.ImageHeight),
-                    new Vector(96, 96),
-                    PixelFormat.Bgra8888,
-                    AlphaFormat.Opaque);
+                // Reuse WriteableBitmap if dimensions haven't changed
+                if (_reusableBitmap == null || _lastWidth != viewport.ImageWidth || _lastHeight != viewport.ImageHeight)
+                {
+                    _reusableBitmap = new WriteableBitmap(
+                        new PixelSize(viewport.ImageWidth, viewport.ImageHeight),
+                        new Vector(96, 96),
+                        PixelFormat.Bgra8888,
+                        AlphaFormat.Opaque);
+                    _lastWidth = viewport.ImageWidth;
+                    _lastHeight = viewport.ImageHeight;
+                }
 
-                using (var frameBuffer = bitmap.Lock())
+                using (var frameBuffer = _reusableBitmap.Lock())
                 {
                     Marshal.Copy(pixelData, 0, frameBuffer.Address, pixelData.Length);
                 }
 
-                FractalImage = bitmap;
+                FractalImage = _reusableBitmap;
 
                 // Adaptive iteration adjustment — target ~100ms render time
                 double elapsedMs = stopwatch.Elapsed.TotalMilliseconds;
@@ -277,7 +396,7 @@ public partial class MainViewModel : ObservableObject
     {
         _zoomService.ZoomOut(ViewportWidth, ViewportHeight);
         UpdateCanZoomOut();
-        _ = GenerateFractalAsync();
+        RequestRender();
     }
 
     [RelayCommand]
@@ -285,7 +404,59 @@ public partial class MainViewModel : ObservableObject
     {
         _zoomService.Reset(ViewportWidth, ViewportHeight);
         UpdateCanZoomOut();
-        _ = GenerateFractalAsync();
+        RequestRender();
+    }
+
+    [RelayCommand]
+    private void ToggleSidePanel()
+    {
+        IsSidePanelVisible = !IsSidePanelVisible;
+    }
+
+    [ObservableProperty]
+    private bool _isAnimating;
+
+    [RelayCommand]
+    private void ToggleAnimation()
+    {
+        if (IsAnimating)
+        {
+            IsAnimating = false;
+        }
+        else
+        {
+            IsAnimating = true;
+            _ = RunAnimationLoopAsync();
+        }
+    }
+
+    private async Task RunAnimationLoopAsync()
+    {
+        while (IsAnimating)
+        {
+            var plane = _zoomService.CurrentViewport.Plane;
+            DoubleDouble realRange = plane.RealMax - plane.RealMin;
+            DoubleDouble imagRange = plane.ImagMax - plane.ImagMin;
+            DoubleDouble centerReal = (plane.RealMin + plane.RealMax) * 0.5;
+            DoubleDouble centerImag = (plane.ImagMin + plane.ImagMax) * 0.5;
+
+            // Zoom in by 3% per frame
+            double factor = 0.97;
+            DoubleDouble newRealRange = realRange * factor;
+            DoubleDouble newImagRange = imagRange * factor;
+
+            var newPlane = new ComplexPlane(
+                centerReal - newRealRange * 0.5,
+                centerReal + newRealRange * 0.5,
+                centerImag - newImagRange * 0.5,
+                centerImag + newImagRange * 0.5
+            );
+
+            _zoomService.ZoomTo(newPlane, ViewportWidth, ViewportHeight);
+            UpdateCanZoomOut();
+
+            await GenerateFractalAsync();
+        }
     }
 
     public void OnPointerPressed(Point position)
@@ -331,7 +502,7 @@ public partial class MainViewModel : ObservableObject
 
         _zoomService.ZoomTo(newPlane, ViewportWidth, ViewportHeight);
         UpdateCanZoomOut();
-        _ = GenerateFractalAsync();
+        RequestRender();
     }
 
     public void OnSizeChanged(int width, int height)
@@ -342,7 +513,7 @@ public partial class MainViewModel : ObservableObject
         ViewportHeight = height;
 
         _zoomService.ResizeCurrent(width, height);
-        _ = GenerateFractalAsync();
+        RequestRender();
     }
 
     private void UpdateCanZoomOut()
@@ -351,27 +522,54 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SaveImage()
+    private async Task SaveImageAsync()
     {
         if (FractalImage == null) return;
 
         try
         {
-            string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedImages");
-            if (!Directory.Exists(folderPath))
+            // If a file-picker delegate is available, use it; otherwise fall back to auto-save
+            string? filePath = null;
+            if (SaveFileDialogAction != null)
             {
-                Directory.CreateDirectory(folderPath);
+                filePath = await SaveFileDialogAction();
             }
 
-            string fileName = $"{SelectedFractalType.Replace(" ", "")}_Capture_{DateTime.Now:yyyyMMdd_HHmmss}.png";
-            string filePath = Path.Combine(folderPath, fileName);
+            if (string.IsNullOrEmpty(filePath))
+            {
+                // Fallback: auto-save to SavedImages folder
+                string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedImages");
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                string fileName = $"{SelectedFractalType.ToString().Replace(" ", "")}_Capture_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+                filePath = Path.Combine(folderPath, fileName);
+            }
 
             FractalImage.Save(filePath);
-            StatusText = $"Saved to {fileName} under base/SavedImages/";
+            StatusText = $"Saved to {Path.GetFileName(filePath)}";
         }
         catch (Exception ex)
         {
             StatusText = $"Save error: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyToClipboardAsync()
+    {
+        if (FractalImage == null || CopyToClipboardAction == null) return;
+
+        try
+        {
+            await CopyToClipboardAction();
+            StatusText = "Image copied to clipboard";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Clipboard error: {ex.Message}";
         }
     }
 
@@ -389,7 +587,6 @@ public partial class MainViewModel : ObservableObject
         double deltaX = position.X - _panStartPoint.X;
         double deltaY = position.Y - _panStartPoint.Y;
 
-        var viewport = _zoomService.CurrentViewport;
         DoubleDouble realRange = _panStartPlane.RealMax - _panStartPlane.RealMin;
         DoubleDouble imagRange = _panStartPlane.ImagMax - _panStartPlane.ImagMin;
 
@@ -404,12 +601,139 @@ public partial class MainViewModel : ObservableObject
         );
 
         _zoomService.UpdateCurrentPlane(newPlane);
-        _ = GenerateFractalAsync();
+
+        // Debounce: restart a 50ms timer instead of rendering on every move
+        _panDebounceTimer?.Dispose();
+        _panDebounceTimer = new Timer(_ =>
+        {
+            // Timer fires on a thread-pool thread; dispatch to UI thread
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => RequestRender());
+        }, null, PanDebounceMs, Timeout.Infinite);
     }
 
     public void EndPan()
     {
         IsPanning = false;
+        // Cancel any pending debounce timer and do one final render
+        _panDebounceTimer?.Dispose();
+        _panDebounceTimer = null;
+        RequestRender();
+    }
+
+    /// <summary>
+    /// Handles mouse wheel zoom centered on the cursor position.
+    /// </summary>
+    public void OnMouseWheelZoom(Point position, double delta)
+    {
+        var viewport = _zoomService.CurrentViewport;
+        var (cursorReal, cursorImag) = CoordinateMapper.PixelToComplex((int)position.X, (int)position.Y, viewport);
+
+        // delta > 0 = zoom in (2x), delta < 0 = zoom out (0.5x)
+        double zoomFactor = delta > 0 ? 0.5 : 2.0;
+
+        DoubleDouble realRange = viewport.Plane.RealMax - viewport.Plane.RealMin;
+        DoubleDouble imagRange = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
+
+        DoubleDouble newRealRange = realRange * zoomFactor;
+        DoubleDouble newImagRange = imagRange * zoomFactor;
+
+        // Center the new range on the cursor position
+        var newPlane = new ComplexPlane(
+            cursorReal - newRealRange * 0.5,
+            cursorReal + newRealRange * 0.5,
+            cursorImag - newImagRange * 0.5,
+            cursorImag + newImagRange * 0.5
+        );
+
+        _zoomService.ZoomTo(newPlane, ViewportWidth, ViewportHeight);
+        UpdateCanZoomOut();
+        RequestRender();
+    }
+
+    /// <summary>
+    /// Pans the view by a percentage of the current viewport span.
+    /// </summary>
+    public void PanByPercent(double percentX, double percentY)
+    {
+        var plane = _zoomService.CurrentViewport.Plane;
+        DoubleDouble realRange = plane.RealMax - plane.RealMin;
+        DoubleDouble imagRange = plane.ImagMax - plane.ImagMin;
+
+        DoubleDouble dReal = realRange * percentX;
+        DoubleDouble dImag = imagRange * percentY;
+
+        var newPlane = new ComplexPlane(
+            plane.RealMin + dReal,
+            plane.RealMax + dReal,
+            plane.ImagMin + dImag,
+            plane.ImagMax + dImag
+        );
+
+        _zoomService.UpdateCurrentPlane(newPlane);
+        RequestRender();
+    }
+
+    /// <summary>
+    /// Zooms in or out centered on the middle of the current viewport.
+    /// </summary>
+    public void ZoomCentered(bool zoomIn)
+    {
+        var plane = _zoomService.CurrentViewport.Plane;
+        double factor = zoomIn ? 0.5 : 2.0;
+
+        DoubleDouble realRange = plane.RealMax - plane.RealMin;
+        DoubleDouble imagRange = plane.ImagMax - plane.ImagMin;
+        DoubleDouble centerReal = (plane.RealMin + plane.RealMax) * 0.5;
+        DoubleDouble centerImag = (plane.ImagMin + plane.ImagMax) * 0.5;
+
+        DoubleDouble newRealRange = realRange * factor;
+        DoubleDouble newImagRange = imagRange * factor;
+
+        var newPlane = new ComplexPlane(
+            centerReal - newRealRange * 0.5,
+            centerReal + newRealRange * 0.5,
+            centerImag - newImagRange * 0.5,
+            centerImag + newImagRange * 0.5
+        );
+
+        _zoomService.ZoomTo(newPlane, ViewportWidth, ViewportHeight);
+        UpdateCanZoomOut();
+        RequestRender();
+    }
+
+    /// <summary>
+    /// Updates the cursor coordinates text from a pixel position.
+    /// </summary>
+    public void UpdateCursorCoordinates(Point position)
+    {
+        var viewport = _zoomService.CurrentViewport;
+        if (viewport.ImageWidth <= 0 || viewport.ImageHeight <= 0) return;
+
+        var (re, im) = CoordinateMapper.PixelToComplex((int)position.X, (int)position.Y, viewport);
+        string sign = (double)im >= 0 ? "+" : "-";
+        DoubleDouble absIm = im.Abs();
+        CursorCoordinatesText = $"z = {(double)re:G6} {sign} {(double)absIm:G6}i";
+    }
+
+    /// <summary>
+    /// Cancels the current selection rectangle without zooming.
+    /// </summary>
+    public void CancelSelection()
+    {
+        IsSelecting = false;
+        SelectionStart = default;
+        SelectionEnd = default;
+    }
+
+    private void RequestRender()
+    {
+        _ = GenerateFractalAsync().ContinueWith(t =>
+        {
+            if (t.IsFaulted && t.Exception != null)
+            {
+                StatusText = $"Error: {t.Exception.InnerException?.Message}";
+            }
+        }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 }
 
