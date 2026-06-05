@@ -6,6 +6,10 @@ namespace Mandelbrot.Core.Services;
 
 public class ParallelFractalGenerator : IFractalGenerator
 {
+    public string Name => "CPU (Parallel)";
+
+    public bool IsGpuAccelerated => false;
+
     public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, CancellationToken ct)
     {
         return Task.Run(() =>

@@ -19,6 +19,12 @@ public partial class MainViewModel : ObservableObject
     private readonly IZoomService _zoomService;
     private CancellationTokenSource? _cts;
 
+    // Adaptive iteration budget — targets ~100ms render time
+    private const double TargetRenderMs = 100.0;
+    private const int MinIterations = 200;
+    private const int MaxIterations = 50_000;
+    private int _adaptiveIterations = 500;
+
     [ObservableProperty]
     private WriteableBitmap? _fractalImage;
 
@@ -91,10 +97,10 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var viewport = _zoomService.CurrentViewport;
-            // Max iterations can scale with zoom level later
-            int maxIterations = 200;
+            int iterations = _adaptiveIterations;
 
-            byte[] pixelData = await _fractalGenerator.GenerateAsync(viewport, maxIterations, token);
+            byte[] pixelData = await _fractalGenerator.GenerateAsync(viewport, iterations, token);
+            stopwatch.Stop();
 
             if (!token.IsCancellationRequested)
             {
@@ -110,8 +116,22 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 FractalImage = bitmap;
-                stopwatch.Stop();
-                StatusText = $"Generated in {stopwatch.ElapsedMilliseconds} ms";
+
+                // Adaptive iteration adjustment — target ~100ms render time
+                double elapsedMs = stopwatch.Elapsed.TotalMilliseconds;
+                if (elapsedMs > 0)
+                {
+                    double ratio = TargetRenderMs / elapsedMs;
+                    // Dampen adjustment (blend 50% old, 50% new) to avoid oscillation
+                    int proposed = (int)(iterations * ratio);
+                    _adaptiveIterations = Math.Clamp(
+                        (iterations + proposed) / 2,
+                        MinIterations,
+                        MaxIterations);
+                }
+
+                double zoomFactor = 3.5 / (viewport.Plane.RealMax - viewport.Plane.RealMin);
+                StatusText = $"{stopwatch.ElapsedMilliseconds} ms | {iterations} iter | {zoomFactor:F1}× ({_fractalGenerator.Name})";
             }
         }
         catch (OperationCanceledException)
@@ -127,7 +147,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ZoomOut()
     {
-        _zoomService.ZoomOut();
+        _zoomService.ZoomOut(ViewportWidth, ViewportHeight);
         UpdateCanZoomOut();
         _ = GenerateFractalAsync();
     }
@@ -193,10 +213,7 @@ public partial class MainViewModel : ObservableObject
         ViewportWidth = width;
         ViewportHeight = height;
 
-        // Optionally, maintain current zoom area but adapt aspect ratio, or just reset to new dimensions
-        // For simplicity, we just trigger a redraw with current plane but new dimensions
-        var currentPlane = _zoomService.CurrentViewport.Plane;
-        _zoomService.ZoomTo(currentPlane, width, height); // This adds to history, maybe we shouldn't on resize, but it works.
+        _zoomService.ResizeCurrent(width, height);
         _ = GenerateFractalAsync();
     }
 

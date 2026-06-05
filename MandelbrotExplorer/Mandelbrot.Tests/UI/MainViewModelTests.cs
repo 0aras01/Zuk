@@ -12,11 +12,19 @@ namespace Mandelbrot.Tests.UI;
 
 public class MainViewModelTests
 {
+    private static Mock<IFractalGenerator> CreateMockGenerator()
+    {
+        var mock = new Mock<IFractalGenerator>();
+        mock.Setup(g => g.Name).Returns("Test Generator");
+        mock.Setup(g => g.IsGpuAccelerated).Returns(false);
+        return mock;
+    }
+
     [Fact]
     public void Selection_UpdatesRectangle()
     {
         // Arrange
-        var mockGenerator = new Mock<IFractalGenerator>();
+        var mockGenerator = CreateMockGenerator();
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(0, 1, 0, 1), 800, 600));
 
@@ -38,7 +46,7 @@ public class MainViewModelTests
     public void PointerReleased_ShouldCallZoomService()
     {
         // Arrange
-        var mockGenerator = new Mock<IFractalGenerator>();
+        var mockGenerator = CreateMockGenerator();
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(0, 100, 0, 100), 100, 100)); // 1 to 1 mapping
 
@@ -55,5 +63,23 @@ public class MainViewModelTests
         // Assert
         mockZoomService.Verify(z => z.ZoomTo(It.IsAny<ComplexPlane>(), 100, 100), Times.Once);
         vm.IsSelecting.Should().BeFalse();
+    }
+
+    [Fact]
+    public void OnSizeChanged_ShouldCallResizeCurrentInsteadOfZoomTo()
+    {
+        // Arrange
+        var mockGenerator = CreateMockGenerator();
+        var mockZoomService = new Mock<IZoomService>();
+        mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(-2, 1, -1, 1), 800, 600));
+
+        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object);
+
+        // Act
+        vm.OnSizeChanged(1024, 768);
+
+        // Assert — should call ResizeCurrent, not ZoomTo
+        mockZoomService.Verify(z => z.ResizeCurrent(1024, 768), Times.Once);
+        mockZoomService.Verify(z => z.ZoomTo(It.IsAny<ComplexPlane>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
     }
 }

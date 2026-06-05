@@ -14,6 +14,10 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
     private readonly Accelerator _accelerator;
     private readonly Action<Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, double, double, double, double> _kernel;
 
+    public string Name => $"GPU (ILGPU - {_accelerator.Name})";
+
+    public bool IsGpuAccelerated => true;
+
     public ILGPUFractalGenerator()
     {
         // Initialize ILGPU Context
@@ -92,10 +96,14 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         // Run ILGPU pipeline asynchronously
         return Task.Run(() =>
         {
+            ct.ThrowIfCancellationRequested();
+
             int totalPixels = viewport.ImageWidth * viewport.ImageHeight;
 
             // Allocate memory on the GPU
             using var buffer = _accelerator.Allocate1D<byte>(totalPixels * 4);
+
+            ct.ThrowIfCancellationRequested();
 
             // Execute the kernel
             _kernel(

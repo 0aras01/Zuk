@@ -47,13 +47,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private void TopLevel_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    private void ViewportCanvas_OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (DataContext is MainViewModel vm)
         {
-            // Give it some valid default if too small
             int w = (int)e.NewSize.Width;
-            int h = (int)(e.NewSize.Height - 50); // Account for bottom bar
+            int h = (int)e.NewSize.Height;
             if (w > 0 && h > 0)
             {
                 vm.OnSizeChanged(w, h);

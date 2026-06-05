@@ -3,4 +3,6 @@
   <Project Path="Mandelbrot.UI/Mandelbrot.UI.csproj" />
   <Project Path="Mandelbrot.Tests/Mandelbrot.Tests.csproj" />
   <Project Path="Mandelbrot.Compute/Mandelbrot.Compute.csproj" />
+  <Project Path="Mandelbrot.Benchmarks/Mandelbrot.Benchmarks.csproj" />
 </Solution>
+

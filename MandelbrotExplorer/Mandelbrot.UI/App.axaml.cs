@@ -25,7 +25,23 @@ public partial class App : Application
     {
         // Dependency Injection Setup
         var collection = new ServiceCollection();
-        collection.AddSingleton<IFractalGenerator, ILGPUFractalGenerator>();
+
+        // Try GPU acceleration first, fall back to CPU if unavailable
+        collection.AddSingleton<IFractalGenerator>(sp =>
+        {
+            try
+            {
+                var gpu = new ILGPUFractalGenerator();
+                Console.WriteLine($"[Mandelbrot] GPU acceleration initialized: {gpu.Name}");
+                return gpu;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Mandelbrot] GPU initialization failed ({ex.Message}), falling back to CPU.");
+                return new ParallelFractalGenerator();
+            }
+        });
+
         collection.AddSingleton<IZoomService, ZoomService>();
         collection.AddTransient<MainViewModel>();
 
@@ -42,3 +58,4 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 }
+

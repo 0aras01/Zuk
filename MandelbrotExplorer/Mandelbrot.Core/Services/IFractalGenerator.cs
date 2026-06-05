@@ -10,6 +10,16 @@ namespace Mandelbrot.Core.Services;
 public interface IFractalGenerator
 {
     /// <summary>
+    /// A human-readable name for this generator (e.g. "GPU (ILGPU)" or "CPU (Parallel)").
+    /// </summary>
+    string Name { get; }
+
+    /// <summary>
+    /// Indicates whether this generator uses GPU acceleration.
+    /// </summary>
+    bool IsGpuAccelerated { get; }
+
+    /// <summary>
     /// Generates a byte array of pixel data (BGRA32 format) for the given viewport.
     /// </summary>
     Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, CancellationToken ct);
