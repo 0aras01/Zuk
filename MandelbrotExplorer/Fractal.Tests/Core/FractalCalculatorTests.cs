@@ -70,5 +70,37 @@ public class FractalCalculatorTests
         // Far out should escape
         FractalCalculator.ComputeIterations(2.0, 2.0, 100, settings).Should().BeLessThan(10);
     }
+
+    [Fact]
+    public void ComputeIterations_Tricorn_ShouldMatchExpectations()
+    {
+        var settings = new FractalSettings(FractalType.Tricorn, 0.0, 0.0);
+        FractalCalculator.ComputeIterations(0.0, 0.0, 100, settings).Should().Be(100);
+        FractalCalculator.ComputeIterations(2.0, 2.0, 100, settings).Should().BeLessThan(10);
+    }
+
+    [Fact]
+    public void ComputeIterations_Celtic_ShouldMatchExpectations()
+    {
+        var settings = new FractalSettings(FractalType.Celtic, 0.0, 0.0);
+        FractalCalculator.ComputeIterations(0.0, 0.0, 100, settings).Should().Be(100);
+        FractalCalculator.ComputeIterations(2.0, 2.0, 100, settings).Should().BeLessThan(10);
+    }
+
+    [Fact]
+    public void ComputeIterations_Buffalo_ShouldMatchExpectations()
+    {
+        var settings = new FractalSettings(FractalType.Buffalo, 0.0, 0.0);
+        FractalCalculator.ComputeIterations(0.0, 0.0, 100, settings).Should().Be(100);
+        FractalCalculator.ComputeIterations(2.0, 2.0, 100, settings).Should().BeLessThan(10);
+    }
+
+    [Fact]
+    public void ComputeIterations_Multibrot3_ShouldMatchExpectations()
+    {
+        var settings = new FractalSettings(FractalType.Multibrot3, 0.0, 0.0);
+        FractalCalculator.ComputeIterations(0.0, 0.0, 100, settings).Should().Be(100);
+        FractalCalculator.ComputeIterations(2.0, 2.0, 100, settings).Should().BeLessThan(10);
+    }
 }
 

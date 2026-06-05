@@ -92,6 +92,46 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
                 iterations++;
             }
         }
+        else if (fractalType == 3) // Tricorn
+        {
+            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
+            {
+                DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
+                zImag = zReal * zImag * -2.0 + cImag;
+                zReal = tempReal;
+                iterations++;
+            }
+        }
+        else if (fractalType == 4) // Celtic
+        {
+            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
+            {
+                DoubleDouble tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
+                zImag = zReal * zImag * 2.0 + cImag;
+                zReal = tempReal;
+                iterations++;
+            }
+        }
+        else if (fractalType == 5) // Buffalo
+        {
+            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
+            {
+                DoubleDouble tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
+                zImag = (zReal * zImag).Abs() * 2.0 + cImag;
+                zReal = tempReal;
+                iterations++;
+            }
+        }
+        else if (fractalType == 6) // Multibrot3
+        {
+            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
+            {
+                DoubleDouble tempReal = zReal * (zReal * zReal - zImag * zImag * 3.0) + cReal;
+                zImag = zImag * (zReal * zReal * 3.0 - zImag * zImag) + cImag;
+                zReal = tempReal;
+                iterations++;
+            }
+        }
         else
         {
             while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
@@ -107,7 +147,8 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         if (iterations < maxIterations)
         {
             double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
-            smoothIter = iterations + 1.0 - Math.Log(logZn / 0.6931471805599453) / 0.6931471805599453;
+            double logDegree = fractalType == 6 ? 1.0986122886681096 : 0.6931471805599453;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
             if (smoothIter < 0.0) smoothIter = 0.0;
         }
 

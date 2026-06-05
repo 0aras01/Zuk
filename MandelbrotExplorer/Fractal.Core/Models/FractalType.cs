@@ -4,5 +4,9 @@ public enum FractalType
 {
     Mandelbrot,
     Julia,
-    BurningShip
+    BurningShip,
+    Tricorn,
+    Celtic,
+    Buffalo,
+    Multibrot3
 }

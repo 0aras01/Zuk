@@ -60,7 +60,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _selectedPalette = "Sunset (Fire)";
 
-    public List<string> FractalTypes { get; } = ["Mandelbrot", "Julia", "Burning Ship"];
+    public List<string> FractalTypes { get; } = ["Mandelbrot", "Julia", "Burning Ship", "Tricorn", "Celtic", "Buffalo", "Multibrot 3"];
 
     [ObservableProperty]
     private string _selectedFractalType = "Mandelbrot";
@@ -202,6 +202,10 @@ public partial class MainViewModel : ObservableObject
             {
                 "Julia" => FractalType.Julia,
                 "Burning Ship" => FractalType.BurningShip,
+                "Tricorn" => FractalType.Tricorn,
+                "Celtic" => FractalType.Celtic,
+                "Buffalo" => FractalType.Buffalo,
+                "Multibrot 3" => FractalType.Multibrot3,
                 _ => FractalType.Mandelbrot
             };
 
