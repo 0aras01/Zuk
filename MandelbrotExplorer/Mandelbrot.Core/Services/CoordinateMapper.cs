@@ -7,24 +7,24 @@ namespace Mandelbrot.Core.Services;
 /// </summary>
 public static class CoordinateMapper
 {
-    public static (double real, double imag) PixelToComplex(int x, int y, Viewport viewport)
+    public static (DoubleDouble real, DoubleDouble imag) PixelToComplex(int x, int y, Viewport viewport)
     {
-        double realRange = viewport.Plane.RealMax - viewport.Plane.RealMin;
-        double imagRange = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
+        DoubleDouble realRange = viewport.Plane.RealMax - viewport.Plane.RealMin;
+        DoubleDouble imagRange = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
 
-        double real = viewport.Plane.RealMin + (x * realRange / viewport.ImageWidth);
-        double imag = viewport.Plane.ImagMax - (y * imagRange / viewport.ImageHeight); // Inverted Y-axis
+        DoubleDouble real = viewport.Plane.RealMin + (realRange * x / viewport.ImageWidth);
+        DoubleDouble imag = viewport.Plane.ImagMax - (imagRange * y / viewport.ImageHeight); // Inverted Y-axis
 
         return (real, imag);
     }
 
-    public static (int x, int y) ComplexToPixel(double real, double imag, Viewport viewport)
+    public static (int x, int y) ComplexToPixel(DoubleDouble real, DoubleDouble imag, Viewport viewport)
     {
-        double realRange = viewport.Plane.RealMax - viewport.Plane.RealMin;
-        double imagRange = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
+        DoubleDouble realRange = viewport.Plane.RealMax - viewport.Plane.RealMin;
+        DoubleDouble imagRange = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
 
-        int x = (int)((real - viewport.Plane.RealMin) * viewport.ImageWidth / realRange);
-        int y = (int)((viewport.Plane.ImagMax - imag) * viewport.ImageHeight / imagRange);
+        int x = (int)((double)(real - viewport.Plane.RealMin) * viewport.ImageWidth / (double)realRange);
+        int y = (int)((double)(viewport.Plane.ImagMax - imag) * viewport.ImageHeight / (double)imagRange);
 
         return (x, y);
     }

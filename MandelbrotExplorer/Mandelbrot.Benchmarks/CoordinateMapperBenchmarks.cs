@@ -20,7 +20,7 @@ public class CoordinateMapperBenchmarks
     }
 
     [Benchmark(Description = "PixelToComplex")]
-    public (double real, double imag) PixelToComplex()
+    public (DoubleDouble real, DoubleDouble imag) PixelToComplex()
     {
         return CoordinateMapper.PixelToComplex(960, 540, _viewport);
     }

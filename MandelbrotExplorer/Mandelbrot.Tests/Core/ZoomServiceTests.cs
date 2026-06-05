@@ -57,8 +57,8 @@ public class ZoomServiceTests
         // Plane center should match the initial plane center
         var plane = zoomService.CurrentViewport.Plane;
         var initialPlane = initialViewport.Plane;
-        double centerReal = (plane.RealMin + plane.RealMax) / 2.0;
-        double initialCenterReal = (initialPlane.RealMin + initialPlane.RealMax) / 2.0;
+        double centerReal = (double)(plane.RealMin + plane.RealMax) / 2.0;
+        double initialCenterReal = (double)(initialPlane.RealMin + initialPlane.RealMax) / 2.0;
         centerReal.Should().BeApproximately(initialCenterReal, 0.001);
     }
 
@@ -93,8 +93,8 @@ public class ZoomServiceTests
 
         // Assert — the plane should be expanded horizontally to match 2:1 viewport
         var plane = zoomService.CurrentViewport.Plane;
-        double planeWidth = plane.RealMax - plane.RealMin;
-        double planeHeight = plane.ImagMax - plane.ImagMin;
+        double planeWidth = (double)(plane.RealMax - plane.RealMin);
+        double planeHeight = (double)(plane.ImagMax - plane.ImagMin);
         double planeAspect = planeWidth / planeHeight;
         planeAspect.Should().BeApproximately(2.0, 0.001);
     }
@@ -109,12 +109,12 @@ public class ZoomServiceTests
         var adjusted = ZoomService.AdjustAspectRatio(plane, 800, 400);
 
         // Assert
-        double width = adjusted.RealMax - adjusted.RealMin;
-        double height = adjusted.ImagMax - adjusted.ImagMin;
+        double width = (double)(adjusted.RealMax - adjusted.RealMin);
+        double height = (double)(adjusted.ImagMax - adjusted.ImagMin);
         (width / height).Should().BeApproximately(2.0, 0.001);
         // Center should be preserved
-        ((adjusted.RealMin + adjusted.RealMax) / 2.0).Should().BeApproximately(0.0, 0.001);
-        ((adjusted.ImagMin + adjusted.ImagMax) / 2.0).Should().BeApproximately(0.0, 0.001);
+        ((double)(adjusted.RealMin + adjusted.RealMax) / 2.0).Should().BeApproximately(0.0, 0.001);
+        ((double)(adjusted.ImagMin + adjusted.ImagMax) / 2.0).Should().BeApproximately(0.0, 0.001);
     }
 
     [Fact]
@@ -127,11 +127,11 @@ public class ZoomServiceTests
         var adjusted = ZoomService.AdjustAspectRatio(plane, 400, 800);
 
         // Assert
-        double width = adjusted.RealMax - adjusted.RealMin;
-        double height = adjusted.ImagMax - adjusted.ImagMin;
+        double width = (double)(adjusted.RealMax - adjusted.RealMin);
+        double height = (double)(adjusted.ImagMax - adjusted.ImagMin);
         (width / height).Should().BeApproximately(0.5, 0.001);
         // Center should be preserved
-        ((adjusted.RealMin + adjusted.RealMax) / 2.0).Should().BeApproximately(0.0, 0.001);
-        ((adjusted.ImagMin + adjusted.ImagMax) / 2.0).Should().BeApproximately(0.0, 0.001);
+        ((double)(adjusted.RealMin + adjusted.RealMax) / 2.0).Should().BeApproximately(0.0, 0.001);
+        ((double)(adjusted.ImagMin + adjusted.ImagMax) / 2.0).Should().BeApproximately(0.0, 0.001);
     }
 }

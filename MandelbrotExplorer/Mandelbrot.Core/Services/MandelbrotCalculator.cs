@@ -1,3 +1,5 @@
+using Mandelbrot.Core.Models;
+
 namespace Mandelbrot.Core.Services;
 
 /// <summary>
@@ -18,6 +20,23 @@ public static class MandelbrotCalculator
         {
             double tempReal = zReal * zReal - zImag * zImag + real;
             zImag = 2 * zReal * zImag + imag;
+            zReal = tempReal;
+            iterations++;
+        }
+
+        return iterations;
+    }
+
+    public static int ComputeIterations(DoubleDouble real, DoubleDouble imag, int maxIterations)
+    {
+        DoubleDouble zReal = 0.0;
+        DoubleDouble zImag = 0.0;
+        int iterations = 0;
+
+        while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
+        {
+            DoubleDouble tempReal = zReal * zReal - zImag * zImag + real;
+            zImag = zReal * zImag * 2.0 + imag;
             zReal = tempReal;
             iterations++;
         }

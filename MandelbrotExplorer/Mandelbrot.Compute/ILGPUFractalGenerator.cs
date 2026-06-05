@@ -12,7 +12,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 {
     private readonly Context _context;
     private readonly Accelerator _accelerator;
-    private readonly Action<Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, double, double, double, double> _kernel;
+    private readonly Action<Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble> _kernel;
 
     public string Name => $"GPU (ILGPU - {_accelerator.Name})";
 
@@ -29,7 +29,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 
         // Compile the kernel for the selected accelerator
         _kernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, double, double, double, double>(MandelbrotKernel);
+            Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble>(MandelbrotKernel);
     }
 
     /// <summary>
@@ -42,28 +42,28 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         int width,
         int height,
         int maxIterations,
-        double realMin,
-        double realMax,
-        double imagMin,
-        double imagMax)
+        DoubleDouble realMin,
+        DoubleDouble realMax,
+        DoubleDouble imagMin,
+        DoubleDouble imagMax)
     {
         int x = index % width;
         int y = index / width;
 
-        double realRange = realMax - realMin;
-        double imagRange = imagMax - imagMin;
+        DoubleDouble realRange = realMax - realMin;
+        DoubleDouble imagRange = imagMax - imagMin;
 
-        double real = realMin + (x * realRange / width);
-        double imag = imagMax - (y * imagRange / height);
+        DoubleDouble real = realMin + (realRange * (double)x / width);
+        DoubleDouble imag = imagMax - (imagRange * (double)y / height);
 
-        double zReal = 0;
-        double zImag = 0;
+        DoubleDouble zReal = 0.0;
+        DoubleDouble zImag = 0.0;
         int iterations = 0;
 
-        while (zReal * zReal + zImag * zImag <= 4 && iterations < maxIterations)
+        while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
         {
-            double tempReal = zReal * zReal - zImag * zImag + real;
-            zImag = 2 * zReal * zImag + imag;
+            DoubleDouble tempReal = zReal * zReal - zImag * zImag + real;
+            zImag = zReal * zImag * 2.0 + imag;
             zReal = tempReal;
             iterations++;
         }

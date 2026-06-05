@@ -73,32 +73,32 @@ public class ZoomService : IZoomService
     {
         if (width <= 0 || height <= 0) return plane;
 
-        double planeWidth = plane.RealMax - plane.RealMin;
-        double planeHeight = plane.ImagMax - plane.ImagMin;
+        DoubleDouble planeWidth = plane.RealMax - plane.RealMin;
+        DoubleDouble planeHeight = plane.ImagMax - plane.ImagMin;
 
         double viewportAspect = (double)width / height;
-        double planeAspect = planeWidth / planeHeight;
+        double planeAspect = (double)planeWidth / (double)planeHeight;
 
-        double realMin = plane.RealMin;
-        double realMax = plane.RealMax;
-        double imagMin = plane.ImagMin;
-        double imagMax = plane.ImagMax;
+        DoubleDouble realMin = plane.RealMin;
+        DoubleDouble realMax = plane.RealMax;
+        DoubleDouble imagMin = plane.ImagMin;
+        DoubleDouble imagMax = plane.ImagMax;
 
         if (viewportAspect > planeAspect)
         {
             // Viewport is wider than the plane — expand the real (horizontal) axis
-            double newPlaneWidth = planeHeight * viewportAspect;
-            double centerReal = (realMin + realMax) / 2.0;
-            realMin = centerReal - newPlaneWidth / 2.0;
-            realMax = centerReal + newPlaneWidth / 2.0;
+            DoubleDouble newPlaneWidth = planeHeight * viewportAspect;
+            DoubleDouble centerReal = (realMin + realMax) * 0.5;
+            realMin = centerReal - newPlaneWidth * 0.5;
+            realMax = centerReal + newPlaneWidth * 0.5;
         }
         else if (viewportAspect < planeAspect)
         {
             // Viewport is taller than the plane — expand the imaginary (vertical) axis
-            double newPlaneHeight = planeWidth / viewportAspect;
-            double centerImag = (imagMin + imagMax) / 2.0;
-            imagMin = centerImag - newPlaneHeight / 2.0;
-            imagMax = centerImag + newPlaneHeight / 2.0;
+            DoubleDouble newPlaneHeight = planeWidth / viewportAspect;
+            DoubleDouble centerImag = (imagMin + imagMax) * 0.5;
+            imagMin = centerImag - newPlaneHeight * 0.5;
+            imagMax = centerImag + newPlaneHeight * 0.5;
         }
 
         return new ComplexPlane(realMin, realMax, imagMin, imagMax);

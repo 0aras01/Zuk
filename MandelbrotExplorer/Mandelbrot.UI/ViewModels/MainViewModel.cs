@@ -15,7 +15,8 @@ namespace Mandelbrot.UI.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly IFractalGenerator _fractalGenerator;
+    private readonly IFractalGenerator _gpuGenerator;
+    private readonly IFractalGenerator _cpuGenerator = new ParallelFractalGenerator();
     private readonly IZoomService _zoomService;
     private CancellationTokenSource? _cts;
 
@@ -30,6 +31,27 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusText = "Ready";
+
+    [ObservableProperty]
+    private string _centerCoordinatesText = "";
+
+    [ObservableProperty]
+    private string _spanText = "";
+
+    [ObservableProperty]
+    private string _resolutionText = "";
+
+    [ObservableProperty]
+    private string _renderTimeText = "";
+
+    [ObservableProperty]
+    private string _iterationsText = "";
+
+    [ObservableProperty]
+    private string _engineText = "";
+
+    [ObservableProperty]
+    private string _zoomText = "";
 
     [ObservableProperty]
     private bool _isSelecting;
@@ -59,7 +81,7 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService)
     {
-        _fractalGenerator = fractalGenerator;
+        _gpuGenerator = fractalGenerator;
         _zoomService = zoomService;
         _zoomService.Reset(ViewportWidth, ViewportHeight);
         UpdateCanZoomOut();
@@ -69,7 +91,7 @@ public partial class MainViewModel : ObservableObject
     // Default constructor for designer
     public MainViewModel()
     {
-        _fractalGenerator = new ParallelFractalGenerator();
+        _gpuGenerator = new ParallelFractalGenerator();
         _zoomService = new ZoomService();
         _zoomService.Reset(ViewportWidth, ViewportHeight);
     }
@@ -99,7 +121,14 @@ public partial class MainViewModel : ObservableObject
             var viewport = _zoomService.CurrentViewport;
             int iterations = _adaptiveIterations;
 
-            byte[] pixelData = await _fractalGenerator.GenerateAsync(viewport, iterations, token);
+            double zoomFactor = 3.5 / (double)(viewport.Plane.RealMax - viewport.Plane.RealMin);
+
+            // CPU is used at deep zoom levels (> 10^10) because GPU drivers optimize away double-double precision math
+            var activeGenerator = (zoomFactor > 1e10 && _gpuGenerator.IsGpuAccelerated)
+                ? _cpuGenerator
+                : _gpuGenerator;
+
+            byte[] pixelData = await activeGenerator.GenerateAsync(viewport, iterations, token);
             stopwatch.Stop();
 
             if (!token.IsCancellationRequested)
@@ -130,8 +159,20 @@ public partial class MainViewModel : ObservableObject
                         MaxIterations);
                 }
 
-                double zoomFactor = 3.5 / (viewport.Plane.RealMax - viewport.Plane.RealMin);
-                StatusText = $"{stopwatch.ElapsedMilliseconds} ms | {iterations} iter | {zoomFactor:F1}× ({_fractalGenerator.Name})";
+                var centerReal = (viewport.Plane.RealMin + viewport.Plane.RealMax) * 0.5;
+                var centerImag = (viewport.Plane.ImagMin + viewport.Plane.ImagMax) * 0.5;
+                var spanReal = viewport.Plane.RealMax - viewport.Plane.RealMin;
+                var spanImag = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
+
+                CenterCoordinatesText = $"Re: {centerReal.ToFullString()}\nIm: {centerImag.ToFullString()}";
+                SpanText = $"{spanReal.ToFullString()} × {spanImag.ToFullString()}";
+                ResolutionText = $"{viewport.ImageWidth} × {viewport.ImageHeight}";
+                RenderTimeText = $"{stopwatch.ElapsedMilliseconds} ms";
+                IterationsText = $"{iterations}";
+                EngineText = $"{activeGenerator.Name}";
+                ZoomText = $"{zoomFactor:N1}×";
+
+                StatusText = $"{stopwatch.ElapsedMilliseconds} ms | {iterations} iter | {zoomFactor:F1}× ({activeGenerator.Name})";
             }
         }
         catch (OperationCanceledException)
@@ -195,10 +236,10 @@ public partial class MainViewModel : ObservableObject
 
         // Remember Y is inverted in complex plane vs screen coordinates
         var newPlane = new ComplexPlane(
-            Math.Min(topLeft.real, bottomRight.real),
-            Math.Max(topLeft.real, bottomRight.real),
-            Math.Min(topLeft.imag, bottomRight.imag), // lower imag value
-            Math.Max(topLeft.imag, bottomRight.imag)  // higher imag value
+            DoubleDouble.Min(topLeft.real, bottomRight.real),
+            DoubleDouble.Max(topLeft.real, bottomRight.real),
+            DoubleDouble.Min(topLeft.imag, bottomRight.imag), // lower imag value
+            DoubleDouble.Max(topLeft.imag, bottomRight.imag)  // higher imag value
         );
 
         _zoomService.ZoomTo(newPlane, ViewportWidth, ViewportHeight);
