@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,6 +59,12 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _selectedPalette = "Sunset (Fire)";
+
+    [ObservableProperty]
+    private bool _isPanning;
+
+    private Point _panStartPoint;
+    private ComplexPlane _panStartPlane;
 
     [ObservableProperty]
     private bool _isSelecting;
@@ -280,5 +287,67 @@ public partial class MainViewModel : ObservableObject
     private void UpdateCanZoomOut()
     {
         CanZoomOut = _zoomService.CanZoomOut;
+    }
+
+    [RelayCommand]
+    private void SaveImage()
+    {
+        if (FractalImage == null) return;
+
+        try
+        {
+            string folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SavedImages");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+
+            string fileName = $"Mandelbrot_Capture_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+            string filePath = Path.Combine(folderPath, fileName);
+
+            FractalImage.Save(filePath);
+            StatusText = $"Saved to {fileName} under base/SavedImages/";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Save error: {ex.Message}";
+        }
+    }
+
+    public void StartPan(Point position)
+    {
+        _panStartPoint = position;
+        _panStartPlane = _zoomService.CurrentViewport.Plane;
+        IsPanning = true;
+    }
+
+    public void MovePan(Point position)
+    {
+        if (!IsPanning) return;
+
+        double deltaX = position.X - _panStartPoint.X;
+        double deltaY = position.Y - _panStartPoint.Y;
+
+        var viewport = _zoomService.CurrentViewport;
+        DoubleDouble realRange = _panStartPlane.RealMax - _panStartPlane.RealMin;
+        DoubleDouble imagRange = _panStartPlane.ImagMax - _panStartPlane.ImagMin;
+
+        DoubleDouble deltaReal = realRange * deltaX / ViewportWidth;
+        DoubleDouble deltaImag = imagRange * deltaY / ViewportHeight;
+
+        var newPlane = new ComplexPlane(
+            _panStartPlane.RealMin - deltaReal,
+            _panStartPlane.RealMax - deltaReal,
+            _panStartPlane.ImagMin + deltaImag,
+            _panStartPlane.ImagMax + deltaImag
+        );
+
+        _zoomService.UpdateCurrentPlane(newPlane);
+        _ = GenerateFractalAsync();
+    }
+
+    public void EndPan()
+    {
+        IsPanning = false;
     }
 }

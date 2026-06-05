@@ -22,6 +22,10 @@ public partial class MainWindow : Window
             {
                 vm.OnPointerPressed(point.Position);
             }
+            else if (point.Properties.IsMiddleButtonPressed)
+            {
+                vm.StartPan(point.Position);
+            }
             else if (point.Properties.IsRightButtonPressed)
             {
                 vm.ZoomOutCommand.Execute(null);
@@ -34,7 +38,14 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm)
         {
             var point = e.GetCurrentPoint(sender as Control);
-            vm.OnPointerMoved(point.Position);
+            if (vm.IsPanning)
+            {
+                vm.MovePan(point.Position);
+            }
+            else
+            {
+                vm.OnPointerMoved(point.Position);
+            }
         }
     }
 
@@ -43,7 +54,14 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm)
         {
             var point = e.GetCurrentPoint(sender as Control);
-            vm.OnPointerReleased(point.Position);
+            if (vm.IsPanning)
+            {
+                vm.EndPan();
+            }
+            else
+            {
+                vm.OnPointerReleased(point.Position);
+            }
         }
     }
 

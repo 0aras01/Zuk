@@ -105,6 +105,8 @@
                             IsEnabled="{Binding CanZoomOut}" />
                     <Button Content="Reset"
                             Command="{Binding ResetCommand}" />
+                    <Button Content="Save Image"
+                            Command="{Binding SaveImageCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
