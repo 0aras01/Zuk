@@ -28,6 +28,12 @@ public partial class NavigationViewModel : ObservableObject
     [ObservableProperty]
     private bool _isPanning;
 
+    [ObservableProperty]
+    private double _panOffsetX;
+
+    [ObservableProperty]
+    private double _panOffsetY;
+
     private Point _panStartPoint;
     private ComplexPlane _panStartPlane;
 
@@ -245,6 +251,8 @@ public partial class NavigationViewModel : ObservableObject
     {
         _panStartPoint = position;
         _panStartPlane = _zoomService.CurrentViewport.Plane;
+        PanOffsetX = 0;
+        PanOffsetY = 0;
         IsPanning = true;
     }
 
@@ -254,6 +262,9 @@ public partial class NavigationViewModel : ObservableObject
 
         double deltaX = position.X - _panStartPoint.X;
         double deltaY = position.Y - _panStartPoint.Y;
+
+        PanOffsetX = deltaX;
+        PanOffsetY = deltaY;
 
         DoubleDouble realRange = _panStartPlane.RealMax - _panStartPlane.RealMin;
         DoubleDouble imagRange = _panStartPlane.ImagMax - _panStartPlane.ImagMin;
@@ -269,12 +280,6 @@ public partial class NavigationViewModel : ObservableObject
         );
 
         _zoomService.UpdateCurrentPlane(newPlane);
-
-        _panDebounceTimer?.Dispose();
-        _panDebounceTimer = new Timer(_ =>
-        {
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => Main.Rendering.RequestRender());
-        }, null, PanDebounceMs, Timeout.Infinite);
     }
 
     public void EndPan()
@@ -283,6 +288,12 @@ public partial class NavigationViewModel : ObservableObject
         _panDebounceTimer?.Dispose();
         _panDebounceTimer = null;
         Main.Rendering.RequestRender();
+    }
+
+    public void ResetPanOffset()
+    {
+        PanOffsetX = 0;
+        PanOffsetY = 0;
     }
 
     public void OnMouseWheelZoom(Point position, double delta)

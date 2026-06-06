@@ -31,7 +31,11 @@
             <Image Source="{Binding Rendering.FractalImage}"
                    Width="{Binding Navigation.ViewportWidth}"
                    Height="{Binding Navigation.ViewportHeight}"
-                   Stretch="Fill" />
+                   Stretch="Fill">
+                <Image.RenderTransform>
+                    <TranslateTransform X="{Binding Navigation.PanOffsetX}" Y="{Binding Navigation.PanOffsetY}" />
+                </Image.RenderTransform>
+            </Image>
 
             <!-- Selection Overlay -->
             <Rectangle IsVisible="{Binding Navigation.IsSelecting}"

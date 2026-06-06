@@ -220,6 +220,11 @@ public partial class RenderingViewModel : ObservableObject
 
                 FractalImage = null;
                 FractalImage = _reusableBitmap;
+                
+                if (!Main.Navigation.IsPanning)
+                {
+                    Main.Navigation.ResetPanOffset();
+                }
 
                 double elapsedMs = stopwatch.Elapsed.TotalMilliseconds;
                 if (elapsedMs > 0)
