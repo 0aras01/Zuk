@@ -1284,7 +1284,7 @@ public class E2ETests : IDisposable
     public async Task Tier2_Export_SaveFileWriteError()
     {
         var vm = await CreateMainViewModelAsync();
-        vm.SaveFileDialogAction = () => Task.FromResult<string?>("Q:\\invalid_drive\\test.png");
+        vm.SaveFileDialogAction = () => Task.FromException<string?>(new IOException("Access denied"));
         vm.SaveImageCommand.Execute(null);
         await Task.Delay(20);
         vm.StatusText.Should().Contain("Save error");
