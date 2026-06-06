@@ -57,7 +57,13 @@ public partial class App : Application
         collection.AddTransient<NavigationViewModel>();
         collection.AddTransient<DiagnosticsViewModel>();
         collection.AddTransient<RenderingViewModel>();
-        collection.AddTransient<MainViewModel>();
+        collection.AddTransient<MainViewModel>(sp =>
+            new MainViewModel(
+                sp.GetRequiredService<NavigationViewModel>(),
+                sp.GetRequiredService<DiagnosticsViewModel>(),
+                sp.GetRequiredService<RenderingViewModel>(),
+                sp.GetRequiredService<ILogger<MainViewModel>>()
+            ));
 
         Services = collection.BuildServiceProvider();
 
