@@ -60,102 +60,108 @@
   </resheader>
   
   <data name="AppName" xml:space="preserve">
-    <value>Fractal Explorer</value>
+    <value>Eksplorator Fraktali</value>
   </data>
   <data name="DiagnosticsTitle" xml:space="preserve">
-    <value>DIAGNOSTICS &amp; COMPUTATION</value>
+    <value>DIAGNOSTYKA I OBLICZENIA</value>
   </data>
   <data name="Zoom" xml:space="preserve">
-    <value>Zoom:</value>
+    <value>Przybliżenie:</value>
   </data>
   <data name="Engine" xml:space="preserve">
-    <value>Engine:</value>
+    <value>Silnik:</value>
   </data>
   <data name="Iterations" xml:space="preserve">
-    <value>Iterations:</value>
+    <value>Iteracje:</value>
   </data>
   <data name="RenderTime" xml:space="preserve">
-    <value>Render Time:</value>
+    <value>Czas renderowania:</value>
   </data>
   <data name="Resolution" xml:space="preserve">
-    <value>Resolution:</value>
+    <value>Rozdzielczość:</value>
   </data>
   <data name="Span" xml:space="preserve">
-    <value>Span:</value>
+    <value>Rozpiętość:</value>
   </data>
   <data name="CenterCoordinates" xml:space="preserve">
-    <value>Center Coordinates:</value>
+    <value>Współrzędne środka:</value>
   </data>
   <data name="Fractal" xml:space="preserve">
-    <value>Fractal:</value>
+    <value>Fraktal:</value>
   </data>
   <data name="Palette" xml:space="preserve">
-    <value>Palette:</value>
+    <value>Paleta:</value>
   </data>
   <data name="ZoomOut" xml:space="preserve">
-    <value>Zoom Out</value>
+    <value>Oddal</value>
   </data>
   <data name="Reset" xml:space="preserve">
-    <value>Reset</value>
+    <value>Resetuj</value>
   </data>
   <data name="SaveImage" xml:space="preserve">
-    <value>Save Image</value>
+    <value>Zapisz obraz</value>
   </data>
   <data name="CopyToClipboard" xml:space="preserve">
-    <value>Copy to Clipboard</value>
+    <value>Kopiuj do schowka</value>
   </data>
   <data name="Language" xml:space="preserve">
-    <value>Language:</value>
+    <value>Język:</value>
   </data>
   <data name="StatusReady" xml:space="preserve">
-    <value>Ready</value>
+    <value>Gotowy</value>
   </data>
   <data name="StatusGenerating" xml:space="preserve">
-    <value>Generating...</value>
+    <value>Generowanie...</value>
   </data>
   <data name="StatusError" xml:space="preserve">
-    <value>Error:</value>
+    <value>Błąd:</value>
   </data>
   <data name="StatusClipboardCopied" xml:space="preserve">
-    <value>Image copied to clipboard</value>
+    <value>Obraz skopiowany do schowka</value>
   </data>
   <data name="StatusClipboardError" xml:space="preserve">
-    <value>Clipboard error:</value>
+    <value>Błąd schowka:</value>
   </data>
   <data name="StatusSavedTo" xml:space="preserve">
-    <value>Saved to</value>
+    <value>Zapisano jako</value>
   </data>
   <data name="DiagnosticsToggle" xml:space="preserve">
-    <value>Show Diagnostics</value>
+    <value>Pokaż diagnostykę</value>
   </data>
   <data name="JuliaReal" xml:space="preserve">
-    <value>Real (Cr):</value>
+    <value>Rzecz. (Cr):</value>
   </data>
   <data name="JuliaImag" xml:space="preserve">
-    <value>Imaginary (Ci):</value>
+    <value>Uroj. (Ci):</value>
   </data>
   <data name="SidePanelToggle" xml:space="preserve">
-    <value>Toggle Sidebar (Tab)</value>
+    <value>Panel boczny (Tab)</value>
   </data>
   <data name="PresetsTitle" xml:space="preserve">
-    <value>Bookmarks / Presets</value>
+    <value>Zakładki / Zapisane</value>
   </data>
   <data name="AddBookmark" xml:space="preserve">
-    <value>Add Bookmark</value>
+    <value>Dodaj zakładkę</value>
   </data>
   <data name="DeleteBookmark" xml:space="preserve">
-    <value>Delete</value>
+    <value>Usuń</value>
   </data>
   <data name="BookmarkNamePrompt" xml:space="preserve">
-    <value>Enter bookmark name:</value>
+    <value>Wpisz nazwę zakładki:</value>
   </data>
   <data name="InvalidJuliaError" xml:space="preserve">
-    <value>Invalid Julia parameters!</value>
+    <value>Błędne parametry Julii!</value>
   </data>
   <data name="PlayAnimation" xml:space="preserve">
-    <value>Auto Zoom</value>
+    <value>Auto-przybliżenie</value>
   </data>
   <data name="StopAnimation" xml:space="preserve">
-    <value>Stop Zoom</value>
+    <value>Zatrzymaj</value>
+  </data>
+  <data name="CancelButtonText" xml:space="preserve">
+    <value>Anuluj renderowanie</value>
+  </data>
+  <data name="StatusCancelled" xml:space="preserve">
+    <value>Renderowanie anulowane</value>
   </data>
 </root>

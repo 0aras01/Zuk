@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
@@ -51,9 +50,9 @@ public partial class MainWindow : Window
             vm.CopyToClipboardAction = async () =>
             {
                 var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-                if (clipboard != null && vm.FractalImage != null)
+                if (clipboard != null && vm.Rendering.FractalImage != null)
                 {
-                    await clipboard.SetBitmapAsync(vm.FractalImage);
+                    await clipboard.SetBitmapAsync(vm.Rendering.FractalImage);
                 }
             };
 
@@ -74,15 +73,15 @@ public partial class MainWindow : Window
             var point = e.GetCurrentPoint(sender as Control);
             if (point.Properties.IsLeftButtonPressed)
             {
-                vm.OnPointerPressed(point.Position);
+                vm.Navigation.OnPointerPressed(point.Position);
             }
             else if (point.Properties.IsMiddleButtonPressed)
             {
-                vm.StartPan(point.Position);
+                vm.Navigation.StartPan(point.Position);
             }
             else if (point.Properties.IsRightButtonPressed)
             {
-                vm.ZoomOutCommand.Execute(null);
+                vm.Navigation.ZoomOutCommand.Execute(null);
             }
         }
     }
@@ -92,18 +91,18 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm)
         {
             var point = e.GetCurrentPoint(sender as Control);
-            if (vm.IsPanning)
+            if (vm.Navigation.IsPanning)
             {
-                vm.MovePan(point.Position);
+                vm.Navigation.MovePan(point.Position);
             }
-            else if (vm.IsSelecting)
+            else if (vm.Navigation.IsSelecting)
             {
-                vm.OnPointerMoved(point.Position);
+                vm.Navigation.OnPointerMoved(point.Position);
             }
             else
             {
                 // Update cursor coordinates when not panning or selecting
-                vm.UpdateCursorCoordinates(point.Position);
+                vm.Navigation.UpdateCursorCoordinates(point.Position);
             }
         }
     }
@@ -113,13 +112,13 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm)
         {
             var point = e.GetCurrentPoint(sender as Control);
-            if (vm.IsPanning)
+            if (vm.Navigation.IsPanning)
             {
-                vm.EndPan();
+                vm.Navigation.EndPan();
             }
             else
             {
-                vm.OnPointerReleased(point.Position);
+                vm.Navigation.OnPointerReleased(point.Position);
             }
         }
     }
@@ -132,7 +131,7 @@ public partial class MainWindow : Window
             int h = (int)e.NewSize.Height;
             if (w > 0 && h > 0)
             {
-                vm.OnSizeChanged(w, h);
+                vm.Navigation.OnSizeChanged(w, h);
             }
         }
     }
@@ -145,7 +144,7 @@ public partial class MainWindow : Window
             double delta = e.Delta.Y;
             if (delta != 0)
             {
-                vm.OnMouseWheelZoom(point.Position, delta);
+                vm.Navigation.OnMouseWheelZoom(point.Position, delta);
                 e.Handled = true;
             }
         }
@@ -163,45 +162,45 @@ public partial class MainWindow : Window
         {
             // Arrow keys: pan 10% of view
             case Key.Left:
-                vm.PanByPercent(-0.1, 0);
+                vm.Navigation.PanByPercent(-0.1, 0);
                 e.Handled = true;
                 break;
             case Key.Right:
-                vm.PanByPercent(0.1, 0);
+                vm.Navigation.PanByPercent(0.1, 0);
                 e.Handled = true;
                 break;
             case Key.Up:
-                vm.PanByPercent(0, 0.1); // positive Y = move up in imaginary axis
+                vm.Navigation.PanByPercent(0, 0.1); // positive Y = move up in imaginary axis
                 e.Handled = true;
                 break;
             case Key.Down:
-                vm.PanByPercent(0, -0.1);
+                vm.Navigation.PanByPercent(0, -0.1);
                 e.Handled = true;
                 break;
 
             // +/= key: zoom in 2x centered
             case Key.OemPlus:
             case Key.Add:
-                vm.ZoomCentered(zoomIn: true);
+                vm.Navigation.ZoomCentered(zoomIn: true);
                 e.Handled = true;
                 break;
 
             // - key: zoom out 2x centered
             case Key.OemMinus:
             case Key.Subtract:
-                vm.ZoomCentered(zoomIn: false);
+                vm.Navigation.ZoomCentered(zoomIn: false);
                 e.Handled = true;
                 break;
 
             // R key: reset view
             case Key.R:
-                vm.ResetCommand.Execute(null);
+                vm.Navigation.ResetCommand.Execute(null);
                 e.Handled = true;
                 break;
 
             // D key: toggle diagnostics panel
             case Key.D:
-                vm.IsDiagnosticsVisible = !vm.IsDiagnosticsVisible;
+                vm.Diagnostics.IsDiagnosticsVisible = !vm.Diagnostics.IsDiagnosticsVisible;
                 e.Handled = true;
                 break;
 
@@ -219,9 +218,9 @@ public partial class MainWindow : Window
 
             // Escape: cancel selection or exit fullscreen
             case Key.Escape:
-                if (vm.IsSelecting)
+                if (vm.Navigation.IsSelecting)
                 {
-                    vm.CancelSelection();
+                    vm.Navigation.CancelSelection();
                 }
                 else if (WindowState == WindowState.FullScreen)
                 {
@@ -232,31 +231,31 @@ public partial class MainWindow : Window
 
             // 1-4: quick palette selection
             case Key.D1:
-                vm.SelectedPalette = PaletteType.Sunset;
+                vm.Rendering.SelectedPalette = PaletteType.Sunset;
                 e.Handled = true;
                 break;
             case Key.D2:
-                vm.SelectedPalette = PaletteType.Ice;
+                vm.Rendering.SelectedPalette = PaletteType.Ice;
                 e.Handled = true;
                 break;
             case Key.D3:
-                vm.SelectedPalette = PaletteType.Rainbow;
+                vm.Rendering.SelectedPalette = PaletteType.Rainbow;
                 e.Handled = true;
                 break;
             case Key.D4:
-                vm.SelectedPalette = PaletteType.Forest;
+                vm.Rendering.SelectedPalette = PaletteType.Forest;
                 e.Handled = true;
                 break;
 
             // Ctrl+C: copy image to clipboard
             case Key.C when e.KeyModifiers.HasFlag(KeyModifiers.Control):
-                vm.CopyToClipboardCommand.Execute(null);
+                vm.Rendering.CopyToClipboardCommand.Execute(null);
                 e.Handled = true;
                 break;
 
             // Ctrl+S: save image
             case Key.S when e.KeyModifiers.HasFlag(KeyModifiers.Control):
-                vm.SaveImageCommand.Execute(null);
+                vm.Rendering.SaveImageCommand.Execute(null);
                 e.Handled = true;
                 break;
         }

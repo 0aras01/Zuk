@@ -28,17 +28,21 @@
                 ClipToBounds="True"
                 PointerWheelChanged="ViewportCanvas_PointerWheelChanged">
 
-            <Image Source="{Binding FractalImage}"
-                   Width="{Binding ViewportWidth}"
-                   Height="{Binding ViewportHeight}"
-                   Stretch="Fill" />
+            <Image Source="{Binding Rendering.FractalImage}"
+                   Width="{Binding Navigation.ViewportWidth}"
+                   Height="{Binding Navigation.ViewportHeight}"
+                   Stretch="Fill">
+                <Image.RenderTransform>
+                    <TranslateTransform X="{Binding Navigation.PanOffsetX}" Y="{Binding Navigation.PanOffsetY}" />
+                </Image.RenderTransform>
+            </Image>
 
             <!-- Selection Overlay -->
-            <Rectangle IsVisible="{Binding IsSelecting}"
-                       Canvas.Left="{Binding SelectionRectangle.X}"
-                       Canvas.Top="{Binding SelectionRectangle.Y}"
-                       Width="{Binding SelectionRectangle.Width}"
-                       Height="{Binding SelectionRectangle.Height}"
+            <Rectangle IsVisible="{Binding Navigation.IsSelecting}"
+                       Canvas.Left="{Binding Navigation.SelectionRectangle.X}"
+                       Canvas.Top="{Binding Navigation.SelectionRectangle.Y}"
+                       Width="{Binding Navigation.SelectionRectangle.Width}"
+                       Height="{Binding Navigation.SelectionRectangle.Height}"
                        Stroke="White"
                        StrokeThickness="2"
                        StrokeDashArray="4,4"
@@ -61,7 +65,7 @@
                     BoxShadow="0 4 15 0 #90000000"
                     Padding="12"
                     IsHitTestVisible="False"
-                    IsVisible="{Binding IsDiagnosticsVisible}">
+                    IsVisible="{Binding Diagnostics.IsDiagnosticsVisible}">
                 <StackPanel Spacing="6">
                     <TextBlock Text="{Binding [DiagnosticsTitle], Source={x:Static services:LocalizationService.Instance}}" 
                                Foreground="#FF9E00" FontSize="10" FontWeight="Bold" LetterSpacing="1"/>
@@ -70,28 +74,28 @@
                     
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="95,*">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding [Zoom], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ZoomText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Diagnostics.ZoomText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                         
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding [Engine], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding EngineText}" Foreground="White" FontSize="11"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Diagnostics.EngineText}" Foreground="White" FontSize="11"/>
                         
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding [Iterations], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding IterationsText}" Foreground="White" FontSize="11"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Diagnostics.IterationsText}" Foreground="White" FontSize="11"/>
                         
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding [RenderTime], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RenderTimeText}" Foreground="White" FontSize="11"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Diagnostics.RenderTimeText}" Foreground="White" FontSize="11"/>
                         
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding [Resolution], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ResolutionText}" Foreground="White" FontSize="11"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Diagnostics.ResolutionText}" Foreground="White" FontSize="11"/>
                         
                         <TextBlock Grid.Row="5" Grid.Column="0" Text="{Binding [Span], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SpanText}" Foreground="White" FontSize="11" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Diagnostics.SpanText}" Foreground="White" FontSize="11" TextWrapping="Wrap"/>
                     </Grid>
 
                     <Separator Margin="0,2" Height="1" Background="#20FFFFFF"/>
                     
                     <TextBlock Text="{Binding [CenterCoordinates], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                    <TextBlock Text="{Binding CenterCoordinatesText}" Foreground="#FFCC00" FontSize="10" FontFamily="Consolas,Monospace" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Diagnostics.CenterCoordinatesText}" Foreground="#FFCC00" FontSize="10" FontFamily="Consolas,Monospace" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
@@ -160,7 +164,7 @@
                             </StackPanel>
 
                             <!-- Diagnostics Toggle -->
-                            <CheckBox IsChecked="{Binding IsDiagnosticsVisible}"
+                            <CheckBox IsChecked="{Binding Diagnostics.IsDiagnosticsVisible}"
                                       Content="{Binding [DiagnosticsToggle], Source={x:Static services:LocalizationService.Instance}}"
                                       Foreground="White" FontSize="12" Margin="0,4,0,0"/>
 
@@ -169,26 +173,26 @@
                             <!-- Fractal Selector -->
                             <StackPanel Spacing="4">
                                 <TextBlock Text="{Binding [Fractal], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                                <ComboBox ItemsSource="{Binding FractalTypes}"
-                                          SelectedItem="{Binding SelectedFractalType}"
+                                <ComboBox ItemsSource="{Binding Rendering.FractalTypes}"
+                                          SelectedItem="{Binding Rendering.SelectedFractalType}"
                                           HorizontalAlignment="Stretch"
                                           Height="30" />
                             </StackPanel>
 
                             <!-- Julia Parameters -->
-                            <StackPanel Spacing="6" IsVisible="{Binding IsJuliaSettingsVisible}" Margin="0,4,0,0">
+                            <StackPanel Spacing="6" IsVisible="{Binding Rendering.IsJuliaSettingsVisible}" Margin="0,4,0,0">
                                 <TextBlock Text="{Binding [JuliaReal], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                                <TextBox Text="{Binding JuliaReal}" Height="28" Padding="6,2" FontSize="11" Background="#30000000" BorderBrush="#20FFFFFF"/>
+                                <TextBox Text="{Binding Rendering.JuliaReal}" Height="28" Padding="6,2" FontSize="11" Background="#30000000" BorderBrush="#20FFFFFF"/>
                                 
                                 <TextBlock Text="{Binding [JuliaImag], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                                <TextBox Text="{Binding JuliaImag}" Height="28" Padding="6,2" FontSize="11" Background="#30000000" BorderBrush="#20FFFFFF"/>
+                                <TextBox Text="{Binding Rendering.JuliaImag}" Height="28" Padding="6,2" FontSize="11" Background="#30000000" BorderBrush="#20FFFFFF"/>
                             </StackPanel>
 
                             <!-- Coloring Palette -->
                             <StackPanel Spacing="4">
                                 <TextBlock Text="{Binding [Palette], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                                <ComboBox ItemsSource="{Binding Palettes}"
-                                          SelectedItem="{Binding SelectedPalette}"
+                                <ComboBox ItemsSource="{Binding Rendering.Palettes}"
+                                          SelectedItem="{Binding Rendering.SelectedPalette}"
                                           HorizontalAlignment="Stretch"
                                           Height="30" />
                             </StackPanel>
@@ -199,8 +203,8 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Text="{Binding [PresetsTitle], Source={x:Static services:LocalizationService.Instance}}" Foreground="#FF9E00" FontSize="11" FontWeight="SemiBold"/>
                                 
-                                <ListBox ItemsSource="{Binding Bookmarks}" 
-                                         SelectedItem="{Binding SelectedBookmark}" 
+                                <ListBox ItemsSource="{Binding Navigation.Bookmarks}" 
+                                         SelectedItem="{Binding Navigation.SelectedBookmark}" 
                                          Height="120" 
                                          Background="#30000000" 
                                          BorderBrush="#20FFFFFF" 
@@ -213,7 +217,7 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="11" Foreground="White" TextTrimming="CharacterEllipsis"/>
                                                 <Button Grid.Column="1" 
                                                         Content="✖" 
-                                                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteBookmarkCommand}" 
+                                                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).Navigation.DeleteBookmarkCommand}" 
                                                         CommandParameter="{Binding}"
                                                         Background="Transparent" Foreground="#FF4444" 
                                                         FontSize="9" Padding="4,2" 
@@ -228,17 +232,17 @@
                                 <Grid ColumnDefinitions="*, Auto" ColumnSpacing="6">
                                     <TextBox Grid.Column="0" 
                                              PlaceholderText="{Binding [BookmarkNamePrompt], Source={x:Static services:LocalizationService.Instance}}" 
-                                             Text="{Binding NewBookmarkName}" 
+                                             Text="{Binding Navigation.NewBookmarkName}" 
                                              Height="28" Padding="6,2" FontSize="11" 
                                              Background="#30000000" BorderBrush="#20FFFFFF"/>
                                     <Button Grid.Column="1" 
-                                            Content="+" 
-                                            Command="{Binding AddBookmarkCommand}"
-                                            Width="28" Height="28"
-                                            Background="#E03C3C3C" Foreground="White"
-                                            BorderBrush="#25FFFFFF" BorderThickness="1"
-                                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                            Padding="0"/>
+                                             Content="+" 
+                                             Command="{Binding Navigation.AddBookmarkCommand}"
+                                             Width="28" Height="28"
+                                             Background="#E03C3C3C" Foreground="White"
+                                             BorderBrush="#25FFFFFF" BorderThickness="1"
+                                             HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                             Padding="0"/>
                                 </Grid>
                             </StackPanel>
 
@@ -247,26 +251,26 @@
                             <!-- Actions -->
                             <StackPanel Spacing="8">
                                 <Button Content="{Binding [PlayAnimation], Source={x:Static services:LocalizationService.Instance}}"
-                                        Command="{Binding ToggleAnimationCommand}"
-                                        IsVisible="{Binding !IsAnimating}"
+                                        Command="{Binding Rendering.ToggleAnimationCommand}"
+                                        IsVisible="{Binding !Rendering.IsAnimating}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                                 <Button Content="{Binding [StopAnimation], Source={x:Static services:LocalizationService.Instance}}"
-                                        Command="{Binding ToggleAnimationCommand}"
-                                        IsVisible="{Binding IsAnimating}"
+                                        Command="{Binding Rendering.ToggleAnimationCommand}"
+                                        IsVisible="{Binding Rendering.IsAnimating}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                         Background="#80FF4444"/>
                                 <Button Content="{Binding [ZoomOut], Source={x:Static services:LocalizationService.Instance}}"
-                                        Command="{Binding ZoomOutCommand}"
-                                        IsEnabled="{Binding CanZoomOut}"
+                                        Command="{Binding Navigation.ZoomOutCommand}"
+                                        IsEnabled="{Binding Navigation.CanZoomOut}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                                 <Button Content="{Binding [Reset], Source={x:Static services:LocalizationService.Instance}}"
-                                        Command="{Binding ResetCommand}"
+                                        Command="{Binding Navigation.ResetCommand}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                                 <Button Content="{Binding [SaveImage], Source={x:Static services:LocalizationService.Instance}}"
-                                        Command="{Binding SaveImageCommand}"
+                                        Command="{Binding Rendering.SaveImageCommand}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                                 <Button Content="{Binding [CopyToClipboard], Source={x:Static services:LocalizationService.Instance}}"
-                                        Command="{Binding CopyToClipboardCommand}"
+                                        Command="{Binding Rendering.CopyToClipboardCommand}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
@@ -288,7 +292,7 @@
                 <Grid ColumnDefinitions="Auto, *, Auto">
                     <!-- Coordinates under cursor -->
                     <TextBlock Grid.Column="0"
-                               Text="{Binding CursorCoordinatesText}"
+                               Text="{Binding Navigation.CursorCoordinatesText}"
                                Foreground="#FFCC00"
                                FontFamily="Consolas,Monospace"
                                FontSize="11"
@@ -297,7 +301,7 @@
                     
                     <!-- App Status Message -->
                     <TextBlock Grid.Column="1"
-                               Text="{Binding StatusText}"
+                               Text="{Binding Rendering.StatusText}"
                                Foreground="White"
                                FontSize="11"
                                Margin="15,0,0,0"
@@ -312,6 +316,68 @@
                                FontSize="10"
                                VerticalAlignment="Center"/>
                 </Grid>
+            </Border>
+        </Grid>
+
+        <!-- R4 Cancel Render Glassmorphic Overlay (displays on top when render takes > 5 seconds) -->
+        <Grid Background="#30000000"
+              IsVisible="{Binding Rendering.IsCancelOverlayVisible}"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+            <Border Width="260"
+                    Height="180"
+                    Background="#E5101010"
+                    BorderBrush="#30FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    BoxShadow="0 8 32 0 #C0000000"
+                    Padding="20"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="16" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <!-- Subtle Circular Loading Animation (Infinitely rotating dashed Ellipse) -->
+                    <Ellipse Width="36" Height="36"
+                             Stroke="#FF9E00"
+                             StrokeThickness="3"
+                             StrokeDashArray="6,4"
+                             HorizontalAlignment="Center"
+                             RenderTransformOrigin="50%,50%">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform />
+                        </Ellipse.RenderTransform>
+                        <Ellipse.Styles>
+                            <Style Selector="Ellipse">
+                                <Style.Animations>
+                                    <Animation Duration="0:0:1.2" IterationCount="Infinite">
+                                        <KeyFrame KeyTime="0:0:0">
+                                            <Setter Property="RotateTransform.Angle" Value="0"/>
+                                        </KeyFrame>
+                                        <KeyFrame KeyTime="0:0:1.2">
+                                            <Setter Property="RotateTransform.Angle" Value="360"/>
+                                        </KeyFrame>
+                                    </Animation>
+                                </Style.Animations>
+                            </Style>
+                        </Ellipse.Styles>
+                    </Ellipse>
+
+                    <TextBlock Text="{Binding [StatusGenerating], Source={x:Static services:LocalizationService.Instance}}"
+                               Foreground="White"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+
+                    <Button Content="{Binding [CancelButtonText], Source={x:Static services:LocalizationService.Instance}}"
+                            Command="{Binding Rendering.CancelRenderCommand}"
+                            Background="#D03A3A"
+                            Foreground="White"
+                            BorderBrush="#FF6060"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12,6"
+                            FontWeight="Bold"
+                            HorizontalAlignment="Center"/>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>
