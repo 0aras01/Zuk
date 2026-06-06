@@ -497,4 +497,114 @@ public partial class RenderingViewModel : ObservableObject
             _logger?.LogError(ex, "Failed to copy image to clipboard");
         }
     }
+
+    public async Task ExportHighResBmpAsync(string filePath, int largeWidth, int largeHeight, CancellationToken ct)
+    {
+        string? directory = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        // 1. Create file and write BMP headers
+        using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+        {
+            // Write BMP Header (14 bytes)
+            byte[] fileHeader = new byte[14];
+            fileHeader[0] = (byte)'B';
+            fileHeader[1] = (byte)'M';
+            
+            int fileSize = 54 + largeWidth * largeHeight * 4;
+            BitConverter.TryWriteBytes(fileHeader.AsSpan(2), fileSize);
+            BitConverter.TryWriteBytes(fileHeader.AsSpan(10), 54); // Offset to pixel data
+            
+            await fs.WriteAsync(fileHeader, ct);
+            
+            // Write DIB Header (BITMAPINFOHEADER, 40 bytes)
+            byte[] dibHeader = new byte[40];
+            BitConverter.TryWriteBytes(dibHeader.AsSpan(0), 40); // Header size
+            BitConverter.TryWriteBytes(dibHeader.AsSpan(4), largeWidth);
+            BitConverter.TryWriteBytes(dibHeader.AsSpan(8), largeHeight);
+            BitConverter.TryWriteBytes(dibHeader.AsSpan(12), (short)1); // Planes
+            BitConverter.TryWriteBytes(dibHeader.AsSpan(14), (short)32); // Bits per pixel (32-bit BGRA)
+            BitConverter.TryWriteBytes(dibHeader.AsSpan(16), 0); // BI_RGB (uncompressed)
+            BitConverter.TryWriteBytes(dibHeader.AsSpan(20), largeWidth * largeHeight * 4); // Image size
+            
+            await fs.WriteAsync(dibHeader, ct);
+            
+            // Pre-allocate the file size to avoid fragmenting
+            fs.SetLength(fileSize);
+        }
+
+        // 2. Determine tiling layout
+        int tileW = 1920;
+        int tileH = 1080;
+        
+        int cols = (largeWidth + tileW - 1) / tileW;
+        int rows = (largeHeight + tileH - 1) / tileH;
+        int totalTiles = cols * rows;
+        
+        var largeViewport = Main.Navigation.ZoomService.CurrentViewport;
+        var largePlane = largeViewport.Plane;
+        
+        DoubleDouble realRange = largePlane.RealMax - largePlane.RealMin;
+        DoubleDouble imagRange = largePlane.ImagMax - largePlane.ImagMin;
+        
+        // Settings for generator
+        int maxIterations = AdaptiveIterations;
+        var palette = SelectedPalette;
+        double paletteOffset = PaletteOffset;
+        var settings = new FractalSettings
+        {
+            Type = SelectedFractalType,
+            JuliaCReal = GetJuliaCReal(),
+            JuliaCImag = GetJuliaCImag()
+        };
+
+        // 3. Render and write tiles
+        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Write, FileShare.ReadWrite, 4096, useAsync: true))
+        {
+            int tileIndex = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    if (ct.IsCancellationRequested) return;
+                    
+                    int xOffset = c * tileW;
+                    int yOffset = r * tileH;
+                    int currentTileW = Math.Min(tileW, largeWidth - xOffset);
+                    int currentTileH = Math.Min(tileH, largeHeight - yOffset);
+                    
+                    // Map tile coordinates
+                    DoubleDouble tileRealMin = largePlane.RealMin + (realRange * xOffset / largeWidth);
+                    DoubleDouble tileRealMax = largePlane.RealMin + (realRange * (xOffset + currentTileW) / largeWidth);
+                    DoubleDouble tileImagMax = largePlane.ImagMax - (imagRange * yOffset / largeHeight);
+                    DoubleDouble tileImagMin = largePlane.ImagMax - (imagRange * (yOffset + currentTileH) / largeHeight);
+                    
+                    var tilePlane = new ComplexPlane(tileRealMin, tileRealMax, tileImagMin, tileImagMax);
+                    var tileViewport = new Viewport(tilePlane, currentTileW, currentTileH);
+                    
+                    // Generate tile
+                    var (tilePixels, _) = await GpuGenerator.GenerateAsync(tileViewport, maxIterations, palette, paletteOffset, settings, ct);
+                    
+                    // Write tile row-by-row
+                    for (int y = 0; y < currentTileH; y++)
+                    {
+                        int largeY = yOffset + y;
+                        int bmpRow = (largeHeight - 1) - largeY;
+                        long seekPos = 54 + (long)bmpRow * largeWidth * 4 + (long)xOffset * 4;
+                        
+                        fs.Seek(seekPos, SeekOrigin.Begin);
+                        
+                        int tileRowStart = y * currentTileW * 4;
+                        await fs.WriteAsync(tilePixels.AsMemory(tileRowStart, currentTileW * 4), ct);
+                    }
+                    
+                    tileIndex++;
+                    StatusText = $"Exporting high-resolution image... {tileIndex * 100 / totalTiles}%";
+                }
+            }
+        }
+    }
 }

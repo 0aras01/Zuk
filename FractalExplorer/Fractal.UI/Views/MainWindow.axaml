@@ -305,6 +305,9 @@
                                 <Button Content="{Binding [CopyToClipboard], Source={x:Static services:LocalizationService.Instance}}"
                                         Command="{Binding Rendering.CopyToClipboardCommand}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                <Button Content="{Binding [ExportPoster], Source={x:Static services:LocalizationService.Instance}}"
+                                        Command="{Binding StartHighResExportCommand}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

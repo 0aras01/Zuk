@@ -1806,13 +1806,32 @@ public class E2ETests : IDisposable
         vm.Is3DShadingEnabled.Should().BeTrue();
     }
 
-    [Fact(Skip="Pending implementation")]
+    [Fact]
     public async Task Tier1_HighResExport_Start()
     {
         var vm = await CreateMainViewModelAsync();
+        vm.Rendering.AdaptiveIterations = 1;
+        string tempFile = Path.Combine(Path.GetTempPath(), $"test_highres_{Guid.NewGuid()}.bmp");
+        
+        vm.SaveFileDialogAction = () => Task.FromResult<string?>(tempFile);
+        
         if (vm.StartHighResExportCommand != null)
-            await vm.StartHighResExportCommand.ExecuteAsync(null);
-        vm.IsHighResExporting.Should().BeTrue();
+        {
+            var task = vm.StartHighResExportCommand.ExecuteAsync(null);
+            vm.IsHighResExporting.Should().BeTrue();
+            await task;
+        }
+        
+        vm.IsHighResExporting.Should().BeFalse();
+        File.Exists(tempFile).Should().BeTrue();
+        
+        var fileInfo = new FileInfo(tempFile);
+        fileInfo.Length.Should().BeGreaterThan(54);
+        
+        if (File.Exists(tempFile))
+        {
+            File.Delete(tempFile);
+        }
     }
 
     [Fact(Skip="Pending implementation")]

@@ -584,8 +584,35 @@ public partial class MainViewModel : ObservableObject
     public bool Is3DShadingEnabled { get; set; }
     public IRelayCommand? Toggle3DShadingCommand { get; set; }
 
-    public bool IsHighResExporting { get; set; }
-    public IAsyncRelayCommand? StartHighResExportCommand { get; set; }
+    [ObservableProperty]
+    private bool _isHighResExporting;
+
+    [RelayCommand]
+    private async Task StartHighResExportAsync()
+    {
+        if (SaveFileDialogAction == null) return;
+
+        string? filePath = await SaveFileDialogAction();
+        if (string.IsNullOrEmpty(filePath)) return;
+
+        IsHighResExporting = true;
+        StatusText = "Exporting high-resolution image...";
+
+        try
+        {
+            await Rendering.ExportHighResBmpAsync(filePath, 7680, 4320, CancellationToken.None);
+            StatusText = "High-resolution export completed";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Export error: {ex.Message}";
+            _logger?.LogError(ex, "Failed high-resolution export");
+        }
+        finally
+        {
+            IsHighResExporting = false;
+        }
+    }
 
     public bool IsGifExporting { get; set; }
     public IAsyncRelayCommand? StartGifExportCommand { get; set; }

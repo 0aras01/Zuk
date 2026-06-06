@@ -176,4 +176,7 @@
   <data name="ScientificNotation" xml:space="preserve">
     <value>Scientific Notation</value>
   </data>
+  <data name="ExportPoster" xml:space="preserve">
+    <value>Export Poster (8K)</value>
+  </data>
 </root>
