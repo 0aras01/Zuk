@@ -256,6 +256,8 @@ public partial class RenderingViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            if (_cts?.Token != token) return;
+            
             _overlayCts?.Cancel();
             _overlayCts = null;
             IsCancelOverlayVisible = false;
@@ -264,6 +266,8 @@ public partial class RenderingViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            if (_cts?.Token != token) return;
+            
             _overlayCts?.Cancel();
             _overlayCts = null;
             IsCancelOverlayVisible = false;
