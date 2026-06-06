@@ -23,6 +23,8 @@ public partial class RenderingViewModel : ObservableObject
     private readonly IFractalGenerator _cpuGenerator = new ParallelFractalGenerator();
     private readonly ILogger<RenderingViewModel>? _logger;
 
+    public IFractalGenerator GpuGenerator => _gpuGenerator;
+
     private CancellationTokenSource? _cts;
     private CancellationTokenSource? _overlayCts;
 
@@ -290,6 +292,9 @@ public partial class RenderingViewModel : ObservableObject
 
                 StatusText = $"{stopwatch.ElapsedMilliseconds} ms | {iterations} iter | {zoomFactor:F1}× ({activeGenerator.Name})";
                 _logger?.LogInformation("Render completed in {ElapsedMs} ms using {EngineName}", stopwatch.ElapsedMilliseconds, activeGenerator.Name);
+
+                Main?.UpdateMinimapViewportRect();
+                _ = Main?.GenerateMinimapAsync();
             }
         }
         catch (OperationCanceledException)

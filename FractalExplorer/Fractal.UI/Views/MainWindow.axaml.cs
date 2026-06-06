@@ -260,4 +260,30 @@ public partial class MainWindow : Window
                 break;
         }
     }
+
+    private void MinimapCanvas_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            var point = e.GetCurrentPoint(sender as Control);
+            if (point.Properties.IsLeftButtonPressed)
+            {
+                vm.OnMinimapClick(point.Position);
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void MinimapCanvas_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            var point = e.GetCurrentPoint(sender as Control);
+            if (point.Properties.IsLeftButtonPressed)
+            {
+                vm.OnMinimapClick(point.Position);
+                e.Handled = true;
+            }
+        }
+    }
 }

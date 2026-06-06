@@ -164,4 +164,7 @@
   <data name="StatusCancelled" xml:space="preserve">
     <value>Renderowanie anulowane</value>
   </data>
+  <data name="Minimap" xml:space="preserve">
+    <value>Pokaż minimapę</value>
+  </data>
 </root>

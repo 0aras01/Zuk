@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media.Imaging;
@@ -313,8 +314,135 @@ public partial class MainViewModel : ObservableObject
     public IRelayCommand? OpenColorPaletteEditorCommand { get; set; }
     public IRelayCommand? CloseColorPaletteEditorCommand { get; set; }
 
-    public bool IsMinimapVisible { get; set; }
-    public IRelayCommand? ToggleMinimapCommand { get; set; }
+    [ObservableProperty]
+    private bool _isMinimapVisible;
+
+    [RelayCommand]
+    private void ToggleMinimap()
+    {
+        IsMinimapVisible = !IsMinimapVisible;
+    }
+
+    [ObservableProperty]
+    private WriteableBitmap? _minimapImage;
+
+    [ObservableProperty]
+    private Rect _minimapViewportRect;
+
+    private CancellationTokenSource? _minimapCts;
+    private static readonly ComplexPlane MinimapPlane = ZoomService.AdjustAspectRatio(new ComplexPlane(-2.5, 1.0, -1.5, 1.5), 160, 120);
+
+    public async Task GenerateMinimapAsync()
+    {
+        _minimapCts?.Cancel();
+        _minimapCts = new CancellationTokenSource();
+        var token = _minimapCts.Token;
+
+        try
+        {
+            var viewport = new Viewport(MinimapPlane, 160, 120);
+            var palette = Rendering.SelectedPalette ?? (Rendering.Palettes.Count > 0 ? Rendering.Palettes[0] : new GradientPalette());
+            var settings = new FractalSettings(
+                Rendering.SelectedFractalType,
+                Rendering.GetJuliaCReal(),
+                Rendering.GetJuliaCImag()
+            );
+
+            var (pixels, _) = await Rendering.GpuGenerator.GenerateAsync(viewport, 100, palette, Rendering.PaletteOffset, settings, token);
+
+            if (!token.IsCancellationRequested)
+            {
+                var bitmap = new WriteableBitmap(
+                    new PixelSize(160, 120),
+                    new Vector(96, 96),
+                    Avalonia.Platform.PixelFormat.Bgra8888,
+                    Avalonia.Platform.AlphaFormat.Opaque);
+
+                using (var frameBuffer = bitmap.Lock())
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(pixels, 0, frameBuffer.Address, pixels.Length);
+                }
+
+                MinimapImage = bitmap;
+            }
+        }
+        catch
+        {
+            // Ignore cancellation or render failures for minimap
+        }
+    }
+
+    public void UpdateMinimapViewportRect()
+    {
+        var currentViewport = Navigation.ZoomService.CurrentViewport;
+        var currentPlane = currentViewport.Plane;
+
+        double wm = 160.0;
+        double hm = 120.0;
+
+        double rMinMinimap = (double)MinimapPlane.RealMin;
+        double rMaxMinimap = (double)MinimapPlane.RealMax;
+        double iMinMinimap = (double)MinimapPlane.ImagMin;
+        double iMaxMinimap = (double)MinimapPlane.ImagMax;
+
+        double rRange = rMaxMinimap - rMinMinimap;
+        double iRange = iMaxMinimap - iMinMinimap;
+
+        if (rRange == 0 || iRange == 0) return;
+
+        double left = wm * ((double)currentPlane.RealMin - rMinMinimap) / rRange;
+        double right = wm * ((double)currentPlane.RealMax - rMinMinimap) / rRange;
+        double top = hm * (iMaxMinimap - (double)currentPlane.ImagMax) / iRange;
+        double bottom = hm * (iMaxMinimap - (double)currentPlane.ImagMin) / iRange;
+
+        double x = left;
+        double y = top;
+        double width = right - left;
+        double height = bottom - top;
+
+        // Ensure a minimum size of 2x2 for visibility at extreme zoom levels
+        if (width < 2.0) width = 2.0;
+        if (height < 2.0) height = 2.0;
+
+        MinimapViewportRect = new Rect(x, y, width, height);
+    }
+
+    public void OnMinimapClick(Point position)
+    {
+        double px = position.X;
+        double py = position.Y;
+
+        double wm = 160.0;
+        double hm = 120.0;
+
+        double rMinMinimap = (double)MinimapPlane.RealMin;
+        double rMaxMinimap = (double)MinimapPlane.RealMax;
+        double iMinMinimap = (double)MinimapPlane.ImagMin;
+        double iMaxMinimap = (double)MinimapPlane.ImagMax;
+
+        double rRange = rMaxMinimap - rMinMinimap;
+        double iRange = iMaxMinimap - iMinMinimap;
+
+        double clickReal = rMinMinimap + (px / wm) * rRange;
+        double clickImag = iMaxMinimap - (py / hm) * iRange;
+
+        var currentViewport = Navigation.ZoomService.CurrentViewport;
+        var currentPlane = currentViewport.Plane;
+        DoubleDouble currentRealRange = currentPlane.RealMax - currentPlane.RealMin;
+        DoubleDouble currentImagRange = currentPlane.ImagMax - currentPlane.ImagMin;
+
+        var newPlane = new ComplexPlane(
+            clickReal - currentRealRange * 0.5,
+            clickReal + currentRealRange * 0.5,
+            clickImag - currentImagRange * 0.5,
+            clickImag + currentImagRange * 0.5
+        );
+
+        Navigation.ZoomService.ZoomTo(newPlane, Navigation.ViewportWidth, Navigation.ViewportHeight);
+        Navigation.UpdateCanZoomOut();
+        Rendering.RequestRender();
+        UpdateMinimapViewportRect();
+    }
 
     public bool IsOrbitPathVisible { get; set; }
     public IRelayCommand? ToggleOrbitCommand { get; set; }

@@ -69,7 +69,7 @@ public class ZoomService : IZoomService
     /// matches the aspect ratio of the pixel viewport, expanding the shorter axis
     /// to prevent stretching.
     /// </summary>
-    internal static ComplexPlane AdjustAspectRatio(ComplexPlane plane, int width, int height)
+    public static ComplexPlane AdjustAspectRatio(ComplexPlane plane, int width, int height)
     {
         if (width <= 0 || height <= 0) return plane;
 

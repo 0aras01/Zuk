@@ -1734,12 +1734,26 @@ public class E2ETests : IDisposable
         vm.IsColorPaletteEditorVisible.Should().BeTrue();
     }
 
-    [Fact(Skip="Pending implementation")]
+    [Fact]
     public async Task Tier1_Minimap_ToggleVisibility()
     {
         var vm = await CreateMainViewModelAsync();
         vm.ToggleMinimapCommand?.Execute(null);
         vm.IsMinimapVisible.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Tier1_Minimap_ClickCoordinatesCalculation()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.ZoomCentered(true);
+        await vm.GenerateFractalCommand.ExecuteAsync(null);
+        
+        // Click on the center of minimap (80, 60 on a 160x120 canvas)
+        vm.OnMinimapClick(new Point(80, 60));
+        
+        // Bounding box should center around (80, 60)
+        (vm.MinimapViewportRect.X + vm.MinimapViewportRect.Width / 2).Should().BeInRange(75, 85);
     }
 
     [Fact(Skip="Pending implementation")]

@@ -168,6 +168,11 @@
                                       Content="{Binding [DiagnosticsToggle], Source={x:Static services:LocalizationService.Instance}}"
                                       Foreground="White" FontSize="12" Margin="0,4,0,0"/>
 
+                            <!-- Minimap Toggle -->
+                            <CheckBox IsChecked="{Binding IsMinimapVisible}"
+                                      Content="{Binding [Minimap], Source={x:Static services:LocalizationService.Instance}}"
+                                      Foreground="White" FontSize="12" Margin="0,4,0,0"/>
+
                             <Separator Height="1" Background="#20FFFFFF"/>
 
                             <!-- Fractal Selector -->
@@ -326,6 +331,37 @@
                                FontSize="10"
                                VerticalAlignment="Center"/>
                 </Grid>
+            </Border>
+
+            <!-- Bottom Left: Minimap / Navigation Map (Bird's Eye View) -->
+            <Border Grid.Row="0" Grid.Column="0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Bottom"
+                    Margin="15,0,0,15"
+                    Width="160" Height="120"
+                    Background="#E5151515"
+                    BorderBrush="#25FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    BoxShadow="0 4 12 0 #90000000"
+                    ClipToBounds="True"
+                    IsVisible="{Binding IsMinimapVisible}">
+                <Canvas Name="MinimapCanvas" 
+                        Width="160" Height="120" 
+                        Background="Transparent"
+                        PointerPressed="MinimapCanvas_PointerPressed"
+                        PointerMoved="MinimapCanvas_PointerMoved">
+                    <Image Source="{Binding MinimapImage}" 
+                           Width="160" Height="120" 
+                           Stretch="Fill"/>
+                    <Rectangle Canvas.Left="{Binding MinimapViewportRect.X}"
+                               Canvas.Top="{Binding MinimapViewportRect.Y}"
+                               Width="{Binding MinimapViewportRect.Width}"
+                               Height="{Binding MinimapViewportRect.Height}"
+                               Stroke="#FF9E00"
+                               StrokeThickness="1.5"
+                               Fill="#20FF9E00"/>
+                </Canvas>
             </Border>
         </Grid>
 

@@ -285,6 +285,7 @@ public partial class NavigationViewModel : ObservableObject
         );
 
         _zoomService.UpdateCurrentPlane(newPlane);
+        Main?.UpdateMinimapViewportRect();
     }
 
     public void EndPan()

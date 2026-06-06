@@ -164,4 +164,7 @@
   <data name="StatusCancelled" xml:space="preserve">
     <value>Render cancelled</value>
   </data>
+  <data name="Minimap" xml:space="preserve">
+    <value>Show Minimap</value>
+  </data>
 </root>
