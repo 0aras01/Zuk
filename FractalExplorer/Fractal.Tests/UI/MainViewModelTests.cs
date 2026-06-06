@@ -7,7 +7,6 @@ using Moq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fractal.Tests.UI;
 
@@ -19,10 +18,10 @@ public class MainViewModelTests
         mock.Setup(g => g.Name).Returns("Test Generator");
         mock.Setup(g => g.IsGpuAccelerated).Returns(false);
         mock.Setup(g => g.GenerateAsync(
-                It.IsAny<Viewport>(), It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Viewport>(), It.IsAny<int>(), It.IsAny<GradientPalette>(), It.IsAny<double>(),
                 It.IsAny<FractalSettings>(), It.IsAny<CancellationToken>()))
-            .Returns<Viewport, int, int, FractalSettings, CancellationToken>(
-                (v, _, _, _, _) => Task.FromResult(new byte[v.ImageWidth * v.ImageHeight * 4]));
+            .Returns<Viewport, int, GradientPalette, double, FractalSettings, CancellationToken>(
+                (v, _, _, _, _, _) => Task.FromResult((new byte[v.ImageWidth * v.ImageHeight * 4], new double[v.ImageWidth * v.ImageHeight])));
         return mock;
     }
 
@@ -34,11 +33,7 @@ public class MainViewModelTests
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(0, 1, 0, 1), 800, 600));
 
-        var vm = new MainViewModel(
-            new NavigationViewModel(mockZoomService.Object, new BookmarkService(), NullLogger<NavigationViewModel>.Instance),
-            new DiagnosticsViewModel(NullLogger<DiagnosticsViewModel>.Instance),
-            new RenderingViewModel(mockGenerator.Object, mockZoomService.Object, NullLogger<RenderingViewModel>.Instance),
-            NullLogger<MainViewModel>.Instance);
+        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object, new BookmarkService());
 
         // Act
         vm.OnPointerPressed(new Point(10, 10));
@@ -60,11 +55,7 @@ public class MainViewModelTests
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(0, 100, 0, 100), 100, 100)); // 1 to 1 mapping
 
-        var vm = new MainViewModel(
-            new NavigationViewModel(mockZoomService.Object, new BookmarkService(), NullLogger<NavigationViewModel>.Instance),
-            new DiagnosticsViewModel(NullLogger<DiagnosticsViewModel>.Instance),
-            new RenderingViewModel(mockGenerator.Object, mockZoomService.Object, NullLogger<RenderingViewModel>.Instance),
-            NullLogger<MainViewModel>.Instance);
+        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object, new BookmarkService());
         vm.ViewportWidth = 100;
         vm.ViewportHeight = 100;
 
@@ -87,11 +78,7 @@ public class MainViewModelTests
         var mockZoomService = new Mock<IZoomService>();
         mockZoomService.Setup(z => z.CurrentViewport).Returns(new Viewport(new ComplexPlane(-2, 1, -1, 1), 800, 600));
 
-        var vm = new MainViewModel(
-            new NavigationViewModel(mockZoomService.Object, new BookmarkService(), NullLogger<NavigationViewModel>.Instance),
-            new DiagnosticsViewModel(NullLogger<DiagnosticsViewModel>.Instance),
-            new RenderingViewModel(mockGenerator.Object, mockZoomService.Object, NullLogger<RenderingViewModel>.Instance),
-            NullLogger<MainViewModel>.Instance);
+        var vm = new MainViewModel(mockGenerator.Object, mockZoomService.Object, new BookmarkService());
 
         // Act
         vm.OnSizeChanged(1024, 768);

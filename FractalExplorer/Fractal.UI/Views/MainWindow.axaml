@@ -194,7 +194,17 @@
                                 <ComboBox ItemsSource="{Binding Rendering.Palettes}"
                                           SelectedItem="{Binding Rendering.SelectedPalette}"
                                           HorizontalAlignment="Stretch"
-                                          Height="30" />
+                                          Height="30">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Grid ColumnDefinitions="*, *">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding Rendering.IsColorCycling}" Content="Color Cycling" Foreground="White" FontSize="11" Margin="0,4,0,0"/>
+                                    <Button Grid.Column="1" Content="Edit Palette" Command="{Binding Rendering.OpenPaletteEditorCommand}" Margin="0,4,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                </Grid>
                             </StackPanel>
 
                             <Separator Height="1" Background="#20FFFFFF"/>

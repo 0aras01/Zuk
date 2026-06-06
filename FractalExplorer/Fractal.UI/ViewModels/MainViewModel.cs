@@ -100,13 +100,13 @@ public partial class MainViewModel : ObservableObject
         set => Diagnostics.ZoomText = value;
     }
 
-    public PaletteType SelectedPalette
+    public GradientPalette? SelectedPalette
     {
         get => Rendering.SelectedPalette;
         set => Rendering.SelectedPalette = value;
     }
 
-    public PaletteType[] Palettes => Rendering.Palettes;
+    public ObservableCollection<GradientPalette> Palettes => Rendering.Palettes;
     public FractalType[] FractalTypes => Rendering.FractalTypes;
 
     public FractalType SelectedFractalType
@@ -180,7 +180,10 @@ public partial class MainViewModel : ObservableObject
     public BookmarkEntry? SelectedBookmark
     {
         get => Navigation.SelectedBookmark;
-        set => Navigation.SelectedBookmark = value;
+        set {
+            Navigation.SelectedBookmark = value;
+            _logger?.LogInformation("Bookmark selected: {Bookmark}", value?.Name);
+        }
     }
 
     public string NewBookmarkName
@@ -196,6 +199,12 @@ public partial class MainViewModel : ObservableObject
     }
 
     public bool IsCancelOverlayVisible
+    {
+        get => Rendering.IsCancelOverlayVisible;
+        set => Rendering.IsCancelOverlayVisible = value;
+    }
+
+    public bool IsCancelVisible
     {
         get => Rendering.IsCancelOverlayVisible;
         set => Rendering.IsCancelOverlayVisible = value;
@@ -253,11 +262,12 @@ public partial class MainViewModel : ObservableObject
         Rendering.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
     }
 
-    public MainViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService, BookmarkService bookmarkService)
+    public MainViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService, BookmarkService bookmarkService, ILogger<MainViewModel>? logger = null, ILogger<RenderingViewModel>? renderingLogger = null)
     {
+        _logger = logger;
         Navigation = new NavigationViewModel(zoomService, bookmarkService, null!);
         Diagnostics = new DiagnosticsViewModel(null!);
-        Rendering = new RenderingViewModel(fractalGenerator, zoomService, null!);
+        Rendering = new RenderingViewModel(fractalGenerator, zoomService, renderingLogger!);
 
         Navigation.Main = this;
         Diagnostics.Main = this;
@@ -297,4 +307,29 @@ public partial class MainViewModel : ObservableObject
     public void UpdateCursorCoordinates(Point position) => Navigation.UpdateCursorCoordinates(position);
     public void CancelSelection() => Navigation.CancelSelection();
     public void OnSizeChanged(int width, int height) => Navigation.OnSizeChanged(width, height);
+
+    // Stubs for new features
+    public bool IsColorPaletteEditorVisible { get; set; }
+    public IRelayCommand? OpenColorPaletteEditorCommand { get; set; }
+    public IRelayCommand? CloseColorPaletteEditorCommand { get; set; }
+
+    public bool IsMinimapVisible { get; set; }
+    public IRelayCommand? ToggleMinimapCommand { get; set; }
+
+    public bool IsOrbitPathVisible { get; set; }
+    public IRelayCommand? ToggleOrbitCommand { get; set; }
+
+    public bool Is3DShadingEnabled { get; set; }
+    public IRelayCommand? Toggle3DShadingCommand { get; set; }
+
+    public bool IsHighResExporting { get; set; }
+    public IAsyncRelayCommand? StartHighResExportCommand { get; set; }
+
+    public bool IsGifExporting { get; set; }
+    public IAsyncRelayCommand? StartGifExportCommand { get; set; }
+
+    public IRelayCommand? RandomDiscoverCommand { get; set; }
+
+    public bool IsSplitViewEnabled { get; set; }
+    public IRelayCommand? ToggleSplitViewCommand { get; set; }
 }

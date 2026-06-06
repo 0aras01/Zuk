@@ -104,9 +104,21 @@ public class E2ETests : IDisposable
         public string Name => "GPU (Simulated)";
         public bool IsGpuAccelerated => true;
 
-        public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, FractalSettings settings, CancellationToken ct)
+        public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
         {
-            return _cpuGenerator.GenerateAsync(viewport, maxIterations, paletteId, settings, ct);
+            return _cpuGenerator.GenerateAsync(viewport, maxIterations, palette, paletteOffset, settings, ct);
+        }
+    }
+
+    private class TestConsoleLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            string msg = formatter(state, exception);
+            Console.WriteLine(msg);
+            if (exception != null) Console.WriteLine(exception.ToString());
         }
     }
 
@@ -116,7 +128,7 @@ public class E2ETests : IDisposable
         var gpuGen = new SimulatedGpuGenerator();
         var zoomService = new ZoomService();
         var bookmarkService = new BookmarkService();
-        var vm = new MainViewModel(gpuGen, zoomService, bookmarkService);
+        var vm = new MainViewModel(gpuGen, zoomService, bookmarkService, new TestConsoleLogger<MainViewModel>(), new TestConsoleLogger<RenderingViewModel>());
         vm.OnSizeChanged(width, height);
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         return vm;
@@ -470,9 +482,10 @@ public class E2ETests : IDisposable
     public async Task Tier1_Presets_ChangeSelectedPalette()
     {
         var vm = await CreateMainViewModelAsync();
-        vm.SelectedPalette = PaletteType.Ice;
+        var icePalette = System.Linq.Enumerable.FirstOrDefault(vm.Palettes, p => p.Name == "Ice") ?? vm.Palettes[0];
+        vm.SelectedPalette = icePalette;
         await vm.GenerateFractalCommand.ExecuteAsync(null);
-        vm.SelectedPalette.Should().Be(PaletteType.Ice);
+        vm.SelectedPalette.Should().Be(icePalette);
     }
 
     [Fact]
@@ -498,15 +511,16 @@ public class E2ETests : IDisposable
     public async Task Tier1_Presets_QuickPaletteHotkeys()
     {
         var vm = await CreateMainViewModelAsync();
-        vm.SelectedPalette = PaletteType.Rainbow;
-        vm.SelectedPalette.Should().Be(PaletteType.Rainbow);
+        var rainbowPalette = System.Linq.Enumerable.FirstOrDefault(vm.Palettes, p => p.Name == "Rainbow") ?? vm.Palettes[0];
+        vm.SelectedPalette = rainbowPalette;
+        vm.SelectedPalette.Should().Be(rainbowPalette);
     }
 
     [Fact]
     public async Task Tier1_Presets_AvailablePalettesList()
     {
         var vm = await CreateMainViewModelAsync();
-        vm.Palettes.Length.Should().BeGreaterThan(0);
+        vm.Palettes.Count.Should().BeGreaterThan(0);
     }
 
     // --- Feature 8: Julia Parameter Tuning ---
@@ -681,8 +695,7 @@ public class E2ETests : IDisposable
     {
         var vm = await CreateMainViewModelAsync();
         vm.SaveFileDialogAction = null;
-        vm.SaveImageCommand.Execute(null);
-        await Task.Delay(20);
+        await vm.SaveImageCommand.ExecuteAsync(null);
         vm.StatusText.Should().Contain("Saved to");
     }
 
@@ -987,7 +1000,7 @@ public class E2ETests : IDisposable
             Name = "Corrupted",
             FractalType = FractalType.Mandelbrot,
             Plane = new ComplexPlane(double.NaN, 1.0, -1.0, 1.0),
-            Palette = PaletteType.Ice,
+            PaletteName = "Forest",
             Iterations = 100
         };
         // Should handle safely or fallback
@@ -1070,8 +1083,8 @@ public class E2ETests : IDisposable
     public async Task Tier2_Presets_SetInvalidPaletteIndex()
     {
         var vm = await CreateMainViewModelAsync();
-        // Force an invalid palette cast
-        vm.SelectedPalette = (PaletteType)99;
+        // Cannot cast to 99 since it's a class now, just set to null
+        vm.SelectedPalette = null;
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         vm.StatusText.Should().NotContain("Error");
     }
@@ -1111,7 +1124,7 @@ public class E2ETests : IDisposable
         vm.ZoomCentered(true);
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         double zoomBefore = GetZoomFactor(vm.ZoomText);
-        vm.SelectedPalette = PaletteType.Rainbow;
+        vm.SelectedPalette = System.Linq.Enumerable.FirstOrDefault(vm.Palettes, p => p.Name == "Rainbow") ?? vm.Palettes[0];
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         GetZoomFactor(vm.ZoomText).Should().Be(zoomBefore);
     }
@@ -1284,7 +1297,7 @@ public class E2ETests : IDisposable
     public async Task Tier2_Export_SaveFileWriteError()
     {
         var vm = await CreateMainViewModelAsync();
-        vm.SaveFileDialogAction = () => Task.FromException<string?>(new IOException("Access denied"));
+        vm.SaveFileDialogAction = () => Task.FromResult<string?>("Q:\\invalid_drive\\test.png");
         vm.SaveImageCommand.Execute(null);
         await Task.Delay(20);
         vm.StatusText.Should().Contain("Save error");
@@ -1455,10 +1468,11 @@ public class E2ETests : IDisposable
     {
         var vm = await CreateMainViewModelAsync();
         vm.ToggleAnimationCommand.Execute(null);
-        vm.SelectedPalette = PaletteType.Ice;
+        var icePalette = System.Linq.Enumerable.FirstOrDefault(vm.Palettes, p => p.Name == "Ice") ?? vm.Palettes[0];
+        vm.SelectedPalette = icePalette;
         await Task.Delay(20);
         vm.ToggleAnimationCommand.Execute(null);
-        vm.SelectedPalette.Should().Be(PaletteType.Ice);
+        vm.SelectedPalette.Should().Be(icePalette);
     }
 
     [Fact]
@@ -1586,7 +1600,8 @@ public class E2ETests : IDisposable
         vm.ZoomCentered(true);
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         // 4. Change palette to Ice.
-        vm.SelectedPalette = PaletteType.Ice;
+        var icePalette = System.Linq.Enumerable.FirstOrDefault(vm.Palettes, p => p.Name == "Ice") ?? vm.Palettes[0];
+        vm.SelectedPalette = icePalette;
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         // 5. Save image.
         bool saveCalled = false;
@@ -1624,5 +1639,156 @@ public class E2ETests : IDisposable
         vm.ResetCommand.Execute(null);
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         vm.SelectedFractalType.Should().Be(FractalType.Mandelbrot);
+    }
+
+    private class ExceptionGpuGenerator : IFractalGenerator
+    {
+        public string Name => "Exception GPU";
+        public bool IsGpuAccelerated => true;
+        public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
+        {
+            throw new InvalidOperationException("Test exception");
+        }
+    }
+
+    [Fact]
+    public async Task Tier1_Logging_LogsExpectedPhrases()
+    {
+        var originalOut = Console.Out;
+        try
+        {
+            using var sw = new StringWriter();
+            Console.SetOut(sw);
+            
+            var vm = await CreateMainViewModelAsync();
+            vm.SelectedBookmark = vm.Bookmarks[0];
+            await vm.GenerateFractalCommand.ExecuteAsync(null);
+            
+            // Generate exception
+            var exceptionGen = new ExceptionGpuGenerator();
+            var zoomService = new ZoomService();
+            var bookmarkService = new BookmarkService();
+            var vm2 = new MainViewModel(exceptionGen, zoomService, bookmarkService, new TestConsoleLogger<MainViewModel>(), new TestConsoleLogger<RenderingViewModel>());
+            try
+            {
+                await vm2.GenerateFractalCommand.ExecuteAsync(null);
+            }
+            catch { }
+            
+            var output = sw.ToString();
+            output.Should().Contain("Render request initiated");
+            output.Should().Contain("Render completed in");
+            output.Should().Contain("Bookmark selected");
+            output.Should().Contain("Render request failed");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    private class SlowGpuGenerator : IFractalGenerator
+    {
+        public string Name => "Slow GPU";
+        public bool IsGpuAccelerated => true;
+        public async Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
+        {
+            await Task.Delay(6000, ct);
+            return (new byte[100], new double[25]);
+        }
+    }
+
+    [Fact]
+    public async Task Tier1_CancelRender_SlowGeneratorCancels()
+    {
+        var slowGen = new SlowGpuGenerator();
+        var zoomService = new ZoomService();
+        var bookmarkService = new BookmarkService();
+        var vm = new MainViewModel(slowGen, zoomService, bookmarkService);
+        vm.SelectedLanguage = "EN";
+        vm.SelectedPalette = new GradientPalette { Name = "Test" };
+        
+        var renderTask = vm.GenerateFractalCommand.ExecuteAsync(null);
+        
+        // Allow some time for cancel button to appear
+        await Task.Delay(5200);
+        
+        vm.IsCancelVisible.Should().BeTrue();
+        
+        var oldImage = vm.FractalImage;
+        vm.CancelRenderCommand.Execute(null);
+        
+        await renderTask;
+        
+        vm.StatusText.ToLower().Should().Contain("cancelled");
+        vm.FractalImage.Should().Be(oldImage);
+    }
+
+    // --- New Features (Pending) ---
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_ColorPaletteEditor_ShowAndHide()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.OpenColorPaletteEditorCommand?.Execute(null);
+        vm.IsColorPaletteEditorVisible.Should().BeTrue();
+    }
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_Minimap_ToggleVisibility()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.ToggleMinimapCommand?.Execute(null);
+        vm.IsMinimapVisible.Should().BeTrue();
+    }
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_OrbitPath_ToggleVisibility()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.ToggleOrbitCommand?.Execute(null);
+        vm.IsOrbitPathVisible.Should().BeTrue();
+    }
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_3DShading_Toggle()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.Toggle3DShadingCommand?.Execute(null);
+        vm.Is3DShadingEnabled.Should().BeTrue();
+    }
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_HighResExport_Start()
+    {
+        var vm = await CreateMainViewModelAsync();
+        if (vm.StartHighResExportCommand != null)
+            await vm.StartHighResExportCommand.ExecuteAsync(null);
+        vm.IsHighResExporting.Should().BeTrue();
+    }
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_GifExport_Start()
+    {
+        var vm = await CreateMainViewModelAsync();
+        if (vm.StartGifExportCommand != null)
+            await vm.StartGifExportCommand.ExecuteAsync(null);
+        vm.IsGifExporting.Should().BeTrue();
+    }
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_RandomDiscover_Execute()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.RandomDiscoverCommand?.Execute(null);
+        vm.StatusText.Should().NotBeNull();
+    }
+
+    [Fact(Skip="Pending implementation")]
+    public async Task Tier1_SplitView_Toggle()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.ToggleSplitViewCommand?.Execute(null);
+        vm.IsSplitViewEnabled.Should().BeTrue();
     }
 }

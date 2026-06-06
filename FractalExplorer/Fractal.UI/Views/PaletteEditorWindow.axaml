@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Fractal.UI.ViewModels"
+        x:Class="Fractal.UI.Views.PaletteEditorWindow"
+        x:DataType="vm:PaletteEditorViewModel"
+        Title="Palette Editor"
+        Width="400" Height="400"
+        Background="#1E1E1E">
+    <Grid RowDefinitions="Auto, *, Auto" Margin="10">
+        <StackPanel Grid.Row="0" Spacing="10">
+            <TextBlock Text="Palette Name" Foreground="White" />
+            <TextBox Text="{Binding PaletteName}" />
+            <Rectangle Height="30" Fill="{Binding GradientPreview}" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="0, 10">
+            <ListBox ItemsSource="{Binding Stops}" SelectedItem="{Binding SelectedStop}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="{Binding Position, StringFormat=P: {0}}" />
+                            <TextBlock Text="{Binding R, StringFormat=R: {0}}" />
+                            <TextBlock Text="{Binding G, StringFormat=G: {0}}" />
+                            <TextBlock Text="{Binding B, StringFormat=B: {0}}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Column="1" Spacing="5" Margin="10,0,0,0">
+                <Button Content="Add Stop" Command="{Binding AddStopCommand}" />
+                <Button Content="Remove Stop" Command="{Binding RemoveStopCommand}" />
+                <Separator />
+                <TextBlock Text="Edit Selected Stop" Foreground="White" />
+                <TextBlock Text="Position:" Foreground="White" />
+                <Slider Value="{Binding SelectedStop.Position}" Minimum="0" Maximum="1" />
+                <TextBlock Text="R:" Foreground="White" />
+                <Slider Value="{Binding SelectedStop.R}" Minimum="0" Maximum="255" />
+                <TextBlock Text="G:" Foreground="White" />
+                <Slider Value="{Binding SelectedStop.G}" Minimum="0" Maximum="255" />
+                <TextBlock Text="B:" Foreground="White" />
+                <Slider Value="{Binding SelectedStop.B}" Minimum="0" Maximum="255" />
+            </StackPanel>
+        </Grid>
+
+        <Button Grid.Row="2" Content="Save &amp; Close" Command="{Binding SaveCommand}" Click="SaveButton_Click" HorizontalAlignment="Right" />
+    </Grid>
+</Window>

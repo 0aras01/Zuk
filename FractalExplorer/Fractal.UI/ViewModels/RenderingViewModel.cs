@@ -13,6 +13,7 @@ using Fractal.Core.Models;
 using Fractal.Core.Services;
 using Fractal.UI.Services;
 using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
 
 namespace Fractal.UI.ViewModels;
 
@@ -51,10 +52,20 @@ public partial class RenderingViewModel : ObservableObject
     [ObservableProperty]
     private bool _isCancelOverlayVisible;
 
-    public PaletteType[] Palettes { get; } = Enum.GetValues<PaletteType>();
+    public ObservableCollection<GradientPalette> Palettes { get; } = new ObservableCollection<GradientPalette>();
 
     [ObservableProperty]
-    private PaletteType _selectedPalette = PaletteType.Sunset;
+    private GradientPalette _selectedPalette = new GradientPalette();
+
+    [ObservableProperty]
+    private bool _isColorCycling;
+
+    [ObservableProperty]
+    private double _paletteOffset;
+
+    private readonly object _stateLock = new object();
+    private byte[]? _colorCyclingPixelBuffer;
+    private double[]? _lastIterations;
 
     public FractalType[] FractalTypes { get; } = Enum.GetValues<FractalType>();
 
@@ -73,19 +84,40 @@ public partial class RenderingViewModel : ObservableObject
     public RenderingViewModel()
     {
         _gpuGenerator = new ParallelFractalGenerator();
+        LoadPalettes();
     }
 
     public RenderingViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService, ILogger<RenderingViewModel> logger)
     {
         _gpuGenerator = fractalGenerator;
         _logger = logger;
+        LoadPalettes();
+    }
+
+    private void LoadPalettes()
+    {
+        var paletteService = new PaletteService();
+        foreach (var p in paletteService.LoadPalettes())
+        {
+            Palettes.Add(p);
+        }
+        if (Palettes.Count > 0)
+        {
+            SelectedPalette = Palettes[0];
+        }
     }
 
     public bool IsBatchUpdating { get; set; }
 
-    partial void OnSelectedPaletteChanged(PaletteType value)
+    partial void OnSelectedPaletteChanged(GradientPalette value)
     {
         if (!IsBatchUpdating) RequestRender();
+    }
+
+    [RelayCommand]
+    private void OpenPaletteEditor()
+    {
+        // TODO: Implement palette editor
     }
 
     partial void OnSelectedFractalTypeChanged(FractalType value)
@@ -110,7 +142,7 @@ public partial class RenderingViewModel : ObservableObject
         try
         {
             SelectedFractalType = FractalType.Mandelbrot;
-            SelectedPalette = PaletteType.Sunset;
+            if (Palettes.Count > 0) SelectedPalette = Palettes[0];
             JuliaReal = "-0.7";
             JuliaImag = "0.27015";
             AdaptiveIterations = 500;
@@ -156,13 +188,10 @@ public partial class RenderingViewModel : ObservableObject
         {
             if (!t.IsCanceled)
             {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                if (_cts != null && !_cts.IsCancellationRequested)
                 {
-                    if (_cts != null && !_cts.IsCancellationRequested)
-                    {
-                        IsCancelOverlayVisible = true;
-                    }
-                });
+                    IsCancelOverlayVisible = true;
+                }
             }
         }, TaskContinuationOptions.ExecuteSynchronously);
 
@@ -181,7 +210,7 @@ public partial class RenderingViewModel : ObservableObject
                 ? _cpuGenerator
                 : _gpuGenerator;
 
-            int paletteId = (int)SelectedPalette;
+
 
             var settings = new FractalSettings(
                 SelectedFractalType,
@@ -193,7 +222,8 @@ public partial class RenderingViewModel : ObservableObject
             if (_pixelBuffer == null || _pixelBuffer.Length != requiredBytes)
                 _pixelBuffer = new byte[requiredBytes];
 
-            byte[] pixelData = await activeGenerator.GenerateAsync(viewport, iterations, paletteId, settings, token);
+            var paletteToUse = SelectedPalette ?? (Palettes.Count > 0 ? Palettes[0] : new GradientPalette());
+            var (pixelData, iterationsData) = await activeGenerator.GenerateAsync(viewport, iterations, paletteToUse, PaletteOffset, settings, token);
             stopwatch.Stop();
 
             if (!token.IsCancellationRequested)
@@ -202,20 +232,28 @@ public partial class RenderingViewModel : ObservableObject
                 _overlayCts = null;
                 IsCancelOverlayVisible = false;
 
-                if (_reusableBitmap == null || _lastWidth != viewport.ImageWidth || _lastHeight != viewport.ImageHeight)
+                lock (_stateLock)
                 {
-                    _reusableBitmap = new WriteableBitmap(
-                        new PixelSize(viewport.ImageWidth, viewport.ImageHeight),
-                        new Vector(96, 96),
-                        PixelFormat.Bgra8888,
-                        AlphaFormat.Opaque);
-                    _lastWidth = viewport.ImageWidth;
-                    _lastHeight = viewport.ImageHeight;
-                }
+                    _lastIterations = iterationsData;
 
-                using (var frameBuffer = _reusableBitmap.Lock())
-                {
-                    Marshal.Copy(pixelData, 0, frameBuffer.Address, pixelData.Length);
+                    if (_reusableBitmap == null || _lastWidth != viewport.ImageWidth || _lastHeight != viewport.ImageHeight)
+                    {
+                        _reusableBitmap = new WriteableBitmap(
+                            new PixelSize(viewport.ImageWidth, viewport.ImageHeight),
+                            new Vector(96, 96),
+                            PixelFormat.Bgra8888,
+                            AlphaFormat.Opaque);
+                        _lastWidth = viewport.ImageWidth;
+                        _lastHeight = viewport.ImageHeight;
+                    }
+
+                    if (_lastWidth == viewport.ImageWidth && _lastHeight == viewport.ImageHeight)
+                    {
+                        using (var frameBuffer = _reusableBitmap.Lock())
+                        {
+                            Marshal.Copy(pixelData, 0, frameBuffer.Address, pixelData.Length);
+                        }
+                    }
                 }
 
                 FractalImage = null;
@@ -284,6 +322,37 @@ public partial class RenderingViewModel : ObservableObject
         IsCancelOverlayVisible = false;
         StatusText = LocalizationService.Instance["StatusCancelled"];
         _logger?.LogInformation("Render cancelled by user.");
+    }
+
+    public void ApplyColorCyclingFrame(int width, int height)
+    {
+        if (!IsColorCycling || _lastIterations == null || SelectedPalette == null) return;
+
+        lock (_stateLock)
+        {
+            if (_reusableBitmap == null || _lastWidth != width || _lastHeight != height) return;
+
+            int count = width * height;
+            if (_lastIterations == null || _lastIterations.Length < count) return;
+
+            if (_colorCyclingPixelBuffer == null || _colorCyclingPixelBuffer.Length < count * 4)
+                _colorCyclingPixelBuffer = new byte[count * 4];
+
+            for (int i = 0; i < count; i++)
+            {
+                SelectedPalette.GetColor(_lastIterations[i], PaletteOffset, out byte r, out byte g, out byte b);
+                int idx = i * 4;
+                _colorCyclingPixelBuffer[idx] = b;
+                _colorCyclingPixelBuffer[idx + 1] = g;
+                _colorCyclingPixelBuffer[idx + 2] = r;
+                _colorCyclingPixelBuffer[idx + 3] = 255;
+            }
+
+            using (var frameBuffer = _reusableBitmap.Lock())
+            {
+                Marshal.Copy(_colorCyclingPixelBuffer, 0, frameBuffer.Address, count * 4);
+            }
+        }
     }
 
     public void RequestRender()

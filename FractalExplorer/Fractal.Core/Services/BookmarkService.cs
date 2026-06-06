@@ -108,7 +108,7 @@ public class BookmarkService
                 Name = "Seahorse Valley",
                 FractalType = FractalType.Mandelbrot,
                 Plane = new ComplexPlane(-0.75, -0.7, 0.05, 0.10),
-                Palette = PaletteType.Sunset,
+                PaletteName = "Sunset",
                 Iterations = 1500
             },
             new()
@@ -116,7 +116,7 @@ public class BookmarkService
                 Name = "Elephant Valley",
                 FractalType = FractalType.Mandelbrot,
                 Plane = new ComplexPlane(0.25, 0.30, -0.05, 0.0),
-                Palette = PaletteType.Ice,
+                PaletteName = "Ice",
                 Iterations = 1000
             },
             new()
@@ -124,7 +124,7 @@ public class BookmarkService
                 Name = "Triple Spiral Valley",
                 FractalType = FractalType.Mandelbrot,
                 Plane = new ComplexPlane(-0.09, -0.08, 0.65, 0.66),
-                Palette = PaletteType.Rainbow,
+                PaletteName = "Rainbow",
                 Iterations = 2000
             },
             new()
@@ -132,7 +132,7 @@ public class BookmarkService
                 Name = "Julia Default",
                 FractalType = FractalType.Julia,
                 Plane = new ComplexPlane(-1.5, 1.5, -1.5, 1.5),
-                Palette = PaletteType.Sunset,
+                PaletteName = "Sunset",
                 Iterations = 500,
                 JuliaCReal = -0.7,
                 JuliaCImag = 0.27015

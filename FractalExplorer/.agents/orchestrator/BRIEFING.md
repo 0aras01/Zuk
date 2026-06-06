@@ -1,73 +1,58 @@
-# BRIEFING — 2026-06-05T19:21:35+02:00
+# BRIEFING — 2026-06-06T09:21:46Z
 
 ## Mission
-Refactor the Fractal Explorer codebase to split the monolithic `MainViewModel` into cohesive sub-ViewModels (NavigationViewModel, DiagnosticsViewModel, RenderingViewModel), and integrate Microsoft.Extensions.Logging, while maintaining all functionality and passing tests.
+Implement 8 major new features for FractalExplorer and run the Dual Track Project Orchestrator pattern.
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_orchestrator
+- Archetype: default
 - Roles: orchestrator, user_liaison, human_reporter, successor
-- Working directory: c:\Users\Admin\source\repos\Zuk\MandelbrotExplorer\.agents\orchestrator\
-- Original parent: Sentinel
-- Original parent conversation ID: 0465ae12-86a0-4fae-8dcd-93afd29679ed
+- Working directory: c:\Users\Admin\source\repos\Zuk\FractalExplorer\.agents\orchestrator
+- Original parent: a5958b99-679c-46b8-ad49-1b27ed0d7137
+- Original parent conversation ID: a5958b99-679c-46b8-ad49-1b27ed0d7137
 
 ## 🔒 My Workflow
-- **Pattern**: Project
-- **Scope document**: PROJECT.md
-1. **Decompose**: Decompose requirements into milestones (e.g. analysis, sub-ViewModels split, logging integration, E2E tests and validation) and record them in PROJECT.md.
-2. **Dispatch & Execute**:
-   - **Direct (iteration loop)**: Explorer → Worker → Reviewer → test → gate
-   - **Delegate (sub-orchestrator)**: Spawn subagents for specific milestones when needed.
-3. **On failure** (in this order):
-   - Retry: nudge stuck agent or re-send task
-   - Replace: spawn fresh agent with partial progress
-   - Skip: proceed without (only if non-critical)
-   - Redistribute: split stuck agent's remaining work
-   - Redesign: re-partition decomposition
-   - Escalate: report to parent (sub-orchestrators only, last resort)
-4. **Succession**: Self-succeed at 16 spawns, write handoff.md, spawn successor.
+- **Pattern**: Project Orchestrator
+- **Scope document**: c:\Users\Admin\source\repos\Zuk\FractalExplorer\PROJECT.md
+1. **Decompose**: Decomposed into 4 sequential feature milestones and an E2E testing track.
+2. **Dispatch & Execute**: Delegating to sub-orchestrators for milestones. Running M1 and E2E in parallel.
+3. **On failure**: Retry, replace, redesign, escalate.
+4. **Succession**: At 16 spawns, self-succeed.
 - **Work items**:
-  1. Initial exploration and planning [done]
-  2. Sub-ViewModels implementation and integration [pending]
-  3. Logging integration [pending]
-  4. Dual track test suite setup [in-progress]
-  5. Verification and validation [pending]
+  1. E2E Testing Suite [in-progress]
+  2. M1: Color Palette System [in-progress]
+  3. M2: UI Overlays [pending]
+  4. M3: Advanced Rendering [pending]
+  5. M4: Advanced UX [pending]
 - **Current phase**: 1
-- **Current focus**: Dual track test suite setup (E2E testing track)
+- **Current focus**: Launching M1 and E2E sub-orchestrators.
 
 ## 🔒 Key Constraints
-- NEVER write, modify, or create source code files directly.
-- NEVER run build/test commands yourself — require workers to do so.
-- Integrity mode: development.
-- Maximum agent limit: 128.
-- Succession threshold: 16 spawns.
-- Never reuse a subagent after it has delivered its handoff.
+- Must delegate to subagents.
+- E2E testing track runs in parallel with implementation.
+- Cannot modify code directly.
+- Ensure audit passes.
 
 ## Current Parent
-- Conversation ID: 0465ae12-86a0-4fae-8dcd-93afd29679ed
-- Updated: not yet
+- Conversation ID: a5958b99-679c-46b8-ad49-1b27ed0d7137
+- Updated: 2026-06-06T09:21:46Z
 
 ## Key Decisions Made
-- Incorporate R4 (Floating Cancel Render Option) into the project design and coordinate it across both parallel tracks.
+- Overwrote old refactoring PROJECT.md with the new 8-feature project scope.
+- Spawning E2E orchestrator and M1 sub-orchestrator.
 
 ## Team Roster
 | Agent | Type | Work Item | Status | Conv ID |
 |-------|------|-----------|--------|---------|
-| aa7abed5 | teamwork_preview_explorer | Initial exploration and baseline tests | completed | aa7abed5-0266-44b9-81f6-279c2e156c87 |
-| e04a1f4a | self (sub_orch) | E2E Testing Track | in-progress | e04a1f4a-5089-4ab6-8328-e8e75fe1c154 |
-| 4bc7da54 | self (sub_orch) | Implementation Track | in-progress | 4bc7da54-731e-4cc0-b64d-b9f0a4889c95 |
+| 1 | self | E2E Testing Suite | completed | 5add4108-0bf8-4ee9-a1f5-1e496c88b7cc |
+| 2 | self | M1: Color Palette | in-progress | 38d76252-ee68-4b40-b748-1dcf693a4871 |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 3 / 16
-- Pending subagents: e04a1f4a-5089-4ab6-8328-e8e75fe1c154, 4bc7da54-731e-4cc0-b64d-b9f0a4889c95
+- Spawn count: 2 / 16
+- Pending subagents: 38d76252-ee68-4b40-b748-1dcf693a4871
 - Predecessor: none
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: task-29
+- Heartbeat cron: not started
 - Safety timer: none
-- On succession: kill all timers before spawning successor
-- On context truncation: run manage_task(Action="list") — re-create if missing
-
-## Artifact Index
-- c:\Users\Admin\source\repos\Zuk\MandelbrotExplorer\.agents\orchestrator\BRIEFING.md — Persistent memory and index.

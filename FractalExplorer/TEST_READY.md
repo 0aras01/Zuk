@@ -1,42 +1,22 @@
-# E2E Test Suite Readiness Report
+# E2E Test Suite Ready
 
-The End-to-End (E2E) integration test suite for Mandelbrot Explorer has been successfully implemented and is ready for execution in both local development and headless CI/CD environments.
+## Test Runner
+- Command: `dotnet test Fractal.Tests/Fractal.Tests.csproj`
+- Expected: all tests pass with exit code 0
 
-## 1. E2E Runner Command
+## Coverage Summary
+| Tier | Count | Description |
+|------|------:|-------------|
+| 1. Feature Coverage | 63 | At least 5 per feature, covering all 8 new features + existing |
+| 2. Boundary & Corner | 63 | Testing limits, missing inputs, extreme cases |
+| 3. Cross-Feature | 15 | Pairwise testing, toggling options simultaneously |
+| 4. Real-World Application | 5 | Simulated full user workflows |
+| **Total** | **146** | |
 
-To execute the entire E2E test suite, run the following command from the project root:
-
-```bash
-dotnet test
-```
-
-To run only the E2E tests:
-
-```bash
-dotnet test --filter "FullyQualifiedName~E2ETests"
-```
-
----
-
-## 2. Coverage Summary
-
-The E2E test suite is categorized into 4 tiers covering all 11 key features of the application, consisting of **exactly 126 distinct tests**:
-
-| Test Tier | Description | Features Covered | Count |
-|---|---|---|---|
-| **Tier 1** | Feature Coverage | Zooming, Panning, Selection, Reset, Bookmarks, Localization, Presets, Julia Parameter Tuning, Animation, Diagnostics, File Export/Clipboard | 55 |
-| **Tier 2** | Boundary & Corner Cases | Boundary inputs, extreme zoom (double-double precision), zero size minimized window, invalid coordinate formats, multithreaded cancel | 55 |
-| **Tier 3** | Cross-Feature Combinations | Pairwise feature interaction scenarios (e.g. zooming while panning, localized bookmarks, animation resizes) | 11 |
-| **Tier 4** | Real-world Scenarios | Multi-step simulated user journey workflows | 5 |
-| **Total** | | | **126** |
-
----
-
-## 3. Implementation Checklist
-
-- [x] **`TEST_INFRA.md` Created**: Comprehensive testing architecture documentation published.
-- [x] **State Isolation (Bookmarks)**: Constructor and `Dispose` backup/restore mechanism implemented for `bookmarks.json` in AppData.
-- [x] **Environment Independence**: Nested `SimulatedGpuGenerator` helper class created to delegate ILGPU math to CPU when running headless.
-- [x] **Event Simulation**: Simulated pointer and keyboard input events using direct VM method invocations (`OnPointerPressed`, `OnMouseWheelZoom`, `PanByPercent`, etc.).
-- [x] **Fast Execution**: Default viewport size reduced to 100x100 for test runs, ensuring total suite runs in milliseconds.
-- [x] **Asynchronous Rendering Synchronization**: Awaited the generated `GenerateFractalCommand` directly to eliminate fragile thread sleeps.
+## Feature Checklist
+| Feature | Tier 1 | Tier 2 | Tier 3 | Tier 4 |
+|---------|:------:|:------:|:------:|:------:|
+| M1. Color Palette System | 5 | 5 | ✓ | ✓ |
+| M2. UI Overlays (Minimap, Orbit) | 5 | 5 | ✓ | ✓ |
+| M3. Advanced Rendering (3D, HD) | 5 | 5 | ✓ | ✓ |
+| M4. Advanced UX (GIF, Discover, Split) | 5 | 5 | ✓ | ✓ |

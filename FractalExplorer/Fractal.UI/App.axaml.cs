@@ -54,6 +54,7 @@ public partial class App : Application
 
         collection.AddSingleton<IZoomService, ZoomService>();
         collection.AddSingleton<BookmarkService>();
+        collection.AddSingleton<IPaletteService, PaletteService>();
         collection.AddTransient<NavigationViewModel>();
         collection.AddTransient<DiagnosticsViewModel>();
         collection.AddTransient<RenderingViewModel>();

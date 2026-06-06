@@ -110,7 +110,12 @@ public partial class NavigationViewModel : ObservableObject
             }
 
             Main.Rendering.SelectedFractalType = value.FractalType;
-            Main.Rendering.SelectedPalette = value.Palette;
+            if (Main.Rendering.Palettes.Count > 0)
+            {
+                var palette = System.Linq.Enumerable.FirstOrDefault(Main.Rendering.Palettes, p => p.Name == value.PaletteName) 
+                              ?? Main.Rendering.Palettes[0];
+                Main.Rendering.SelectedPalette = palette;
+            }
             Main.Rendering.AdaptiveIterations = value.Iterations;
         }
         finally
@@ -138,7 +143,7 @@ public partial class NavigationViewModel : ObservableObject
             Name = NewBookmarkName.Trim(),
             FractalType = Main.Rendering.SelectedFractalType,
             Plane = viewport.Plane,
-            Palette = Main.Rendering.SelectedPalette,
+            PaletteName = Main.Rendering.SelectedPalette?.Name ?? "Sunset",
             Iterations = Main.Rendering.AdaptiveIterations,
             JuliaCReal = (double)Main.Rendering.GetJuliaCReal(),
             JuliaCImag = (double)Main.Rendering.GetJuliaCImag()

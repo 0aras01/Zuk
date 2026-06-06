@@ -1,49 +1,23 @@
-# Project: MandelbrotExplorer Refactoring
+# Project: FractalExplorer New Features
 
 ## Architecture
-This project refactors the presentation layer of the Mandelbrot Explorer application. It splits the monolithic `MainViewModel` into three cohesive sub-ViewModels under the MVVM pattern, using `CommunityToolkit.Mvvm`, integrates structured logging using `Microsoft.Extensions.Logging`, and adds a floating cancel render option.
-
-- **MainViewModel**: Coordinates the sub-ViewModels. Acts as the primary DataContext for `MainWindow`.
-- **NavigationViewModel**: Manages viewport dimensions, panning/zooming calculations, selection rectangles, and bookmark entries.
-- **DiagnosticsViewModel**: Manages diagnostic telemetry HUD (Zoom, Engine, Iterations, Render Time, Resolution, Span) and visibility toggles.
-- **RenderingViewModel**: Manages fractal image rendering, CPU/GPU generator dispatching, adaptive iterations logic, animation loop, file saving/clipboard sharing, and the floating cancel render overlay state and logic.
+This project adds 8 major new features to the existing FractalExplorer desktop application (Avalonia C#).
+The features are categorized into four milestones:
+- M1: Color Palette System (GradientPalette model, UI editor, Color Cycling)
+- M2: UI Overlays (Minimap, Orbit Path)
+- M3: Advanced Rendering (3D Normal Map Shading, High-Res Export)
+- M4: Advanced UX (GIF Export, Random Discover, Split View)
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| 1 | E2E Testing Suite | Setup E2E testing infra and write feature/boundary/combination tests (Tiers 1-4) including Cancel button testing | None | IN_PROGRESS |
-| 2 | DI & Log Configuration | Add Microsoft.Extensions.Logging dependencies and configure App DI container | None | DONE |
-| 3 | sub-ViewModels Implementation | Implement Navigation, Diagnostics, and Rendering ViewModels, including logging and floating cancel logic | M2 | IN_PROGRESS |
-| 4 | View Integration | Update bindings in MainWindow.axaml and event handlers in MainWindow.axaml.cs (including floating Cancel button overlay) | M3 | PLANNED |
-| 5 | Test Refactoring | Update MainViewModelTests.cs to verify the new VM structure and pass all tests | M1, M4 | PLANNED |
-| 6 | Adversarial Hardening | Implement Tier 5 coverage check, verify warnings/errors are 0, and confirm all constraints | M5 | PLANNED |
+| 1 | Color Palette System | Replace hardcoded palette ID system with a `GradientPalette` model (JSON-based storage). Implement a UI editor with an interactive gradient bar, color stops, and 12 built-in aesthetic palettes. Add a "Color Cycling" toggle that animates the palette offset continuously without re-rendering the fractal. | None | PLANNED |
+| 2 | UI Overlays | Add a small floating window in the bottom-left showing the full Mandelbrot set with a rectangle indicating the current viewport. Add Orbit Visualization (toggled via 'O' key), clicking on the fractal traces and draws the iteration path as a polyline overlay. | None | PLANNED |
+| 3 | Advanced Rendering | Implement Lambertian 3D lighting as a post-processing step based on iteration gradients. Add UI sliders for Light Azimuth, Elevation, and Ambient strength. Implement a tiled rendering service capable of generating 4K/8K images directly to disk without running out of memory, accompanied by a UI progress bar. | None | PLANNED |
+| 4 | Advanced UX | Use AnimatedGif NuGet package to record a sequence of zoom frames and export them as an animated GIF. Add an algorithm that searches the Mandelbrot boundary for high-variance areas and navigates to a random interesting location. Implement a dual-panel view to compare different fractals or palettes side-by-side with a sync/async navigation toggle. | None | PLANNED |
 
 ## Interface Contracts
-### MainViewModel ↔ sub-ViewModels
-- `MainViewModel` instantiates and holds instances of:
-  - `NavigationViewModel Navigation`
-  - `DiagnosticsViewModel Diagnostics`
-  - `RenderingViewModel Rendering`
-- Coordination is achieved using C# events:
-  - `Navigation.RenderRequested` and `Rendering.RenderRequested` trigger `Rendering.GenerateFractalAsync()` via `MainViewModel`.
-  - `Rendering.RenderStarted` updates diagnostics status.
-  - `Rendering.RenderCompleted` updates stats in both `Diagnostics` and `Navigation`.
-  - `Navigation.BookmarkSelected` updates selected properties in `Rendering`.
-
-## Floating Cancel Render Option (R4)
-- **Overlay UI**: A floating "Cancel" button overlay on top of the image canvas in `MainWindow.axaml`.
-- **Visibility & Timer**: Button is bound to `Rendering.IsCancelButtonVisible`. Inside `RenderingViewModel`, when a render is initiated:
-  - A timer is scheduled for 5 seconds.
-  - If 5 seconds elapse and the render is still running, `IsCancelButtonVisible` is set to `true`.
-  - When the render completes, fails, or is cancelled, the timer is cleared and `IsCancelButtonVisible` is set to `false`.
-- **Cancellation**: Clicking the button triggers `Rendering.CancelRenderCommand`, calling `CancellationTokenSource.Cancel()`.
-- **Fallback Image & Status**: The previously successfully rendered image remains displayed on the screen. The status bar displays the localized message: "Render cancelled" / "Renderowanie anulowane" retrieved from `LocalizationService`.
+TBD by each sub-orchestrator.
 
 ## Code Layout
-- `Fractal.UI/ViewModels/MainViewModel.cs` - Coordinator ViewModel.
-- `Fractal.UI/ViewModels/NavigationViewModel.cs` - Viewport and Bookmark management.
-- `Fractal.UI/ViewModels/DiagnosticsViewModel.cs` - Performance stats and HUD.
-- `Fractal.UI/ViewModels/RenderingViewModel.cs` - Fractal calculation, animation, and cancel option logic.
-- `Fractal.UI/Views/MainWindow.axaml` - MainWindow layout, bindings, and cancel button overlay.
-- `Fractal.UI/Views/MainWindow.axaml.cs` - MainWindow event handlers and OS delegates.
-- `Fractal.Tests/UI/MainViewModelTests.cs` - UI ViewModel tests.
+Existing codebase.

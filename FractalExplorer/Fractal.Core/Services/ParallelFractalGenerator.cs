@@ -10,13 +10,14 @@ public class ParallelFractalGenerator : IFractalGenerator
 
     public bool IsGpuAccelerated => false;
 
-    public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, FractalSettings settings, CancellationToken ct)
+    public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
     {
         return Task.Run(() =>
         {
             int width = viewport.ImageWidth;
             int height = viewport.ImageHeight;
             byte[] pixels = new byte[width * height * 4];
+            double[] iterations = new double[width * height];
 
             DoubleDouble centerReal = (viewport.Plane.RealMin + viewport.Plane.RealMax) * 0.5;
             DoubleDouble centerImag = (viewport.Plane.ImagMin + viewport.Plane.ImagMax) * 0.5;
@@ -52,6 +53,9 @@ public class ParallelFractalGenerator : IFractalGenerator
                         smoothIter = FractalCalculator.ComputeSmoothIterations(real, imag, maxIterations, settings);
                     }
 
+                    int idx = y * width + x;
+                    iterations[idx] = smoothIter;
+
                     byte r, g, b;
                     if (smoothIter >= maxIterations)
                     {
@@ -59,12 +63,11 @@ public class ParallelFractalGenerator : IFractalGenerator
                     }
                     else
                     {
-                        // Map smooth iterations value to [0.0, 1.0] and get cosine color
                         double t = smoothIter / maxIterations;
-                        FractalCalculator.GetColor(t, paletteId, out r, out g, out b);
+                        palette.GetColor(t, paletteOffset, out r, out g, out b);
                     }
 
-                    int offset = (y * width + x) * 4;
+                    int offset = idx * 4;
                     pixels[offset] = b;     // B
                     pixels[offset + 1] = g; // G
                     pixels[offset + 2] = r; // R
@@ -72,7 +75,7 @@ public class ParallelFractalGenerator : IFractalGenerator
                 }
             });
 
-            return pixels;
+            return (pixels, iterations);
         }, ct);
     }
 }

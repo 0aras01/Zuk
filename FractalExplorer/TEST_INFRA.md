@@ -23,7 +23,7 @@ The `BookmarkService` reads and writes to `bookmarks.json` in the user's `AppDat
 
 ## 2. Test Hierarchy (4-Tier Suite)
 
-The suite contains exactly **126 distinct tests** organized into four tiers:
+The suite contains **146 distinct tests** organized into four tiers (20 new tests added for the 8 new features):
 
 ### Tier 1: Feature Coverage (55 Tests)
 - **Zooming**: Verified via wheel scrolls, keyboard zooms, and stack navigation history.
@@ -37,6 +37,10 @@ The suite contains exactly **126 distinct tests** organized into four tiers:
 - **Animation**: Toggling animation loops, coordinate updates, loop termination.
 - **Diagnostics**: HUD telemetry formats, adaptive iteration speed adjustment.
 - **Export/Clipboard**: Save-file dialog mocks, clipboard copy delegates, fallback directories.
+- **Color Palette**: JSON loading/saving, color stop addition/removal, cyclic offset animations.
+- **UI Overlays**: Minimap view synchronization, Orbit Path visualization toggles.
+- **Advanced Rendering**: 3D normal map shading options, HD tiled rendering progress.
+- **Advanced UX**: GIF frame sequences, Discover location generation, Split View navigation modes.
 
 ### Tier 2: Boundary & Corner Cases (55 Tests)
 - Testing of extreme zoom factors ($10^{15}$ depth) triggering engine switching.

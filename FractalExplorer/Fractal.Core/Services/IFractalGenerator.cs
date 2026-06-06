@@ -20,8 +20,8 @@ public interface IFractalGenerator
     bool IsGpuAccelerated { get; }
 
     /// <summary>
-    /// Generates a byte array of pixel data (BGRA32 format) for the given viewport.
+    /// Generates a byte array of pixel data (BGRA32 format) for the given viewport, and the double array of iteration data.
     /// </summary>
-    Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, FractalSettings settings, CancellationToken ct);
+    Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct);
 }
 

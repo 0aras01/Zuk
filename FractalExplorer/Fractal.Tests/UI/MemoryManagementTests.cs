@@ -3,8 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using FluentAssertions;
+using Avalonia;
 using Fractal.Core.Models;
 using Fractal.Core.Services;
+using Fractal.UI;
 using Fractal.UI.ViewModels;
 using Fractal.Compute;
 using Moq;
@@ -13,6 +15,22 @@ namespace Fractal.Tests.UI;
 
 public class MemoryManagementTests
 {
+    public MemoryManagementTests()
+    {
+        if (Application.Current == null)
+        {
+            try
+            {
+                AppBuilder.Configure<App>()
+                    .UsePlatformDetect()
+                    .SetupWithoutStarting();
+            }
+            catch
+            {
+                // Suppress initialization errors
+            }
+        }
+    }
     private class SimulatedGpuGenerator : IFractalGenerator
     {
         private readonly ParallelFractalGenerator _cpuGenerator = new();
@@ -20,9 +38,9 @@ public class MemoryManagementTests
         public string Name => "GPU (Simulated)";
         public bool IsGpuAccelerated => true;
 
-        public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, FractalSettings settings, CancellationToken ct)
+        public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
         {
-            return _cpuGenerator.GenerateAsync(viewport, maxIterations, paletteId, settings, ct);
+            return _cpuGenerator.GenerateAsync(viewport, maxIterations, palette, paletteOffset, settings, ct);
         }
     }
 

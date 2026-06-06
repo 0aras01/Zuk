@@ -1,21 +1,20 @@
-# BRIEFING — 2026-06-05T19:21:10+02:00
+# BRIEFING — 2026-06-06T07:21:24Z
 
 ## Mission
-Spawn orchestrator and monitor the refactoring of MandelbrotExplorer to split MainViewModel and add logging.
+Manage orchestrator and monitor progress for FractalExplorer new features project.
 
 ## 🔒 My Identity
 - Archetype: sentinel
-- Working directory: c:\Users\Admin\source\repos\Zuk\MandelbrotExplorer\.agents\sentinel\
-- Orchestrator: 1dff41c2-4496-4026-a450-d35e769a529a
-- Victory Auditor: TBD
+- Working directory: c:\Users\Admin\source\repos\Zuk\FractalExplorer\.agents\sentinel
+- Orchestrator: 6870a75c-d38b-4fe3-b3c1-94dea9d4d001
+- Victory Auditor: [to be spawned on victory claim]
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
 - Victory Audit is MANDATORY before reporting completion
-- Monitor the project files and report progress using crons
 
 ## User Context
-- **Last user request**: Added R4 (Floating Cancel Render Option) to ViewModel split and logging requirements.
+- **Last user request**: Implement 8 major new features for FractalExplorer
 - **Pending clarifications**: none
 - **Delivered results**: none
 
@@ -28,5 +27,4 @@ Spawn orchestrator and monitor the refactoring of MandelbrotExplorer to split Ma
 - **Retry count**: 0
 
 ## Artifact Index
-- c:\Users\Admin\source\repos\Zuk\MandelbrotExplorer\ORIGINAL_REQUEST.md — Original user request
-- c:\Users\Admin\source\repos\Zuk\MandelbrotExplorer\.agents\original_prompt.md — Sentinel prompt history
+- c:\Users\Admin\source\repos\Zuk\FractalExplorer\.agents\ORIGINAL_REQUEST.md — Original User Request

@@ -30,21 +30,6 @@ public class FractalCalculatorTests
         (outside % 1.0).Should().NotBe(0.0);
     }
 
-    [Theory]
-    [InlineData(1)] // Sunset (Fire)
-    [InlineData(2)] // Ice (Blue)
-    [InlineData(3)] // Rainbow
-    [InlineData(4)] // Forest
-    public void GetColor_ShouldReturnValidRgb(int paletteId)
-    {
-        for (double t = 0.0; t <= 1.0; t += 0.1)
-        {
-            FractalCalculator.GetColor(t, paletteId, out byte r, out byte g, out byte b);
-            r.Should().BeInRange(0, 255);
-            g.Should().BeInRange(0, 255);
-            b.Should().BeInRange(0, 255);
-        }
-    }
 
     [Fact]
     public void ComputeIterations_Julia_ShouldMatchExpectations()

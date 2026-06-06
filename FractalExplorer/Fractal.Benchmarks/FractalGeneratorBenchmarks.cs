@@ -37,9 +37,10 @@ public class FractalGeneratorBenchmarks
     }
 
     [Benchmark(Description = "CPU ParallelFractalGenerator")]
-    public async Task<byte[]> GenerateCpu()
+    public async Task<(byte[] Pixels, double[] Iterations)> GenerateCpu()
     {
-        return await _generator.GenerateAsync(_viewport, MaxIterations, 1, default, CancellationToken.None);
+        var dummyPalette = new GradientPalette();
+        return await _generator.GenerateAsync(_viewport, MaxIterations, dummyPalette, 0.0, default, CancellationToken.None);
     }
 }
 

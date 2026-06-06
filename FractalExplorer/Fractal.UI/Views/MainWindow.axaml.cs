@@ -231,19 +231,19 @@ public partial class MainWindow : Window
 
             // 1-4: quick palette selection
             case Key.D1:
-                vm.Rendering.SelectedPalette = PaletteType.Sunset;
+                if (vm.Rendering.Palettes.Count > 0) vm.Rendering.SelectedPalette = vm.Rendering.Palettes[0];
                 e.Handled = true;
                 break;
             case Key.D2:
-                vm.Rendering.SelectedPalette = PaletteType.Ice;
+                if (vm.Rendering.Palettes.Count > 1) vm.Rendering.SelectedPalette = vm.Rendering.Palettes[1];
                 e.Handled = true;
                 break;
             case Key.D3:
-                vm.Rendering.SelectedPalette = PaletteType.Rainbow;
+                if (vm.Rendering.Palettes.Count > 2) vm.Rendering.SelectedPalette = vm.Rendering.Palettes[2];
                 e.Handled = true;
                 break;
             case Key.D4:
-                vm.Rendering.SelectedPalette = PaletteType.Forest;
+                if (vm.Rendering.Palettes.Count > 3) vm.Rendering.SelectedPalette = vm.Rendering.Palettes[3];
                 e.Handled = true;
                 break;
 

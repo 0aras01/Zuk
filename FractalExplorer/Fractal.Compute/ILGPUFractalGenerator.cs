@@ -12,7 +12,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 {
     private readonly Context _context;
     private readonly Accelerator _accelerator;
-    private readonly Action<Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble> _kernel;
+    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble> _kernel;
 
     public string Name => $"GPU (ILGPU - {_accelerator.Name})";
 
@@ -20,29 +20,19 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 
     public ILGPUFractalGenerator()
     {
-        // Initialize ILGPU Context
-        // Use default configuration which prefers GPU (OpenCL/CUDA) over CPU
         _context = Context.CreateDefault();
-
-        // Find best accelerator
         _accelerator = _context.GetPreferredDevice(preferCPU: false).CreateAccelerator(_context);
 
-        // Compile the kernel for the selected accelerator
         _kernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<byte, Stride1D.Dense>, int, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble>(FractalKernel);
+            Index1D, ArrayView1D<double, Stride1D.Dense>, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble>(FractalKernel);
     }
 
-    /// <summary>
-    /// The GPU kernel that calculates the fractal sets.
-    /// This method is executed on the device (GPU).
-    /// </summary>
     public static void FractalKernel(
         Index1D index,
-        ArrayView1D<byte, Stride1D.Dense> output,
+        ArrayView1D<double, Stride1D.Dense> output,
         int width,
         int height,
         int maxIterations,
-        int paletteId,
         int fractalType,
         DoubleDouble juliaCReal,
         DoubleDouble juliaCImag,
@@ -152,47 +142,26 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
             if (smoothIter < 0.0) smoothIter = 0.0;
         }
 
-        int offset = index * 4;
-
-        byte r, g, b;
-        if (smoothIter >= maxIterations)
-        {
-            r = 0; g = 0; b = 0;
-        }
-        else
-        {
-            double t = smoothIter / maxIterations;
-            FractalCalculator.GetColor(t, paletteId, out r, out g, out b);
-        }
-
-        output[offset] = b;
-        output[offset + 1] = g;
-        output[offset + 2] = r;
-        output[offset + 3] = 255;
+        output[index] = smoothIter;
     }
 
-    public Task<byte[]> GenerateAsync(Viewport viewport, int maxIterations, int paletteId, FractalSettings settings, CancellationToken ct)
+    public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
     {
-        // Run ILGPU pipeline asynchronously
         return Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();
 
             int totalPixels = viewport.ImageWidth * viewport.ImageHeight;
-
-            // Allocate memory on the GPU
-            using var buffer = _accelerator.Allocate1D<byte>(totalPixels * 4);
+            using var buffer = _accelerator.Allocate1D<double>(totalPixels);
 
             ct.ThrowIfCancellationRequested();
 
-            // Execute the kernel
             _kernel(
                 totalPixels,
                 buffer.View,
                 viewport.ImageWidth,
                 viewport.ImageHeight,
                 maxIterations,
-                paletteId,
                 (int)settings.Type,
                 settings.JuliaCReal,
                 settings.JuliaCImag,
@@ -201,13 +170,36 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
                 viewport.Plane.ImagMin,
                 viewport.Plane.ImagMax);
 
-            // Wait for GPU to finish
             _accelerator.Synchronize();
-
             ct.ThrowIfCancellationRequested();
 
-            // Copy data back from GPU to CPU
-            return buffer.GetAsArray1D();
+            double[] iterations = buffer.GetAsArray1D();
+            byte[] pixels = new byte[totalPixels * 4];
+
+            ParallelOptions options = new ParallelOptions { CancellationToken = ct };
+            Parallel.For(0, totalPixels, options, i =>
+            {
+                double smoothIter = iterations[i];
+                byte r, g, b;
+                
+                if (smoothIter >= maxIterations)
+                {
+                    r = 0; g = 0; b = 0;
+                }
+                else
+                {
+                    double t = smoothIter / maxIterations;
+                    palette.GetColor(t, paletteOffset, out r, out g, out b);
+                }
+
+                int offset = i * 4;
+                pixels[offset] = b;
+                pixels[offset + 1] = g;
+                pixels[offset + 2] = r;
+                pixels[offset + 3] = 255;
+            });
+
+            return (pixels, iterations);
         }, ct);
     }
 
