@@ -11,6 +11,7 @@ public partial class PaletteEditorViewModel : ObservableObject
 {
     private readonly IPaletteService _paletteService;
     private readonly RenderingViewModel _renderingViewModel;
+    private bool _isInitializing;
 
     [ObservableProperty]
     private string _paletteName = "New Palette";
@@ -22,6 +23,7 @@ public partial class PaletteEditorViewModel : ObservableObject
 
     public PaletteEditorViewModel(IPaletteService paletteService, RenderingViewModel renderingViewModel, GradientPalette? initialPalette = null)
     {
+        _isInitializing = true;
         _paletteService = paletteService;
         _renderingViewModel = renderingViewModel;
 
@@ -51,6 +53,8 @@ public partial class PaletteEditorViewModel : ObservableObject
         foreach(var stop in Stops) {
             stop.PropertyChanged += Item_PropertyChanged;
         }
+
+        _isInitializing = false;
     }
 
     private void Item_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -61,6 +65,16 @@ public partial class PaletteEditorViewModel : ObservableObject
     private void UpdatePreview()
     {
         OnPropertyChanged(nameof(GradientPreview));
+
+        if (!_isInitializing)
+        {
+            var tempPalette = new GradientPalette { Name = PaletteName, IsBuiltIn = false };
+            foreach (var s in Stops.OrderBy(x => x.Position))
+            {
+                tempPalette.Stops.Add(new GradientStop(s.Position, s.R, s.G, s.B));
+            }
+            _renderingViewModel.SelectedPalette = tempPalette;
+        }
     }
 
     public Avalonia.Media.IBrush GradientPreview

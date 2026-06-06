@@ -116,10 +116,16 @@ public partial class RenderingViewModel : ObservableObject
         if (!IsBatchUpdating) RequestRender();
     }
 
+    public Action<GradientPalette?>? OpenPaletteEditorAction { get; set; }
+
     [RelayCommand]
     private void OpenPaletteEditor()
     {
-        // TODO: Implement palette editor
+        if (Main != null)
+        {
+            Main.IsColorPaletteEditorVisible = true;
+        }
+        OpenPaletteEditorAction?.Invoke(SelectedPalette);
     }
 
     partial void OnSelectedFractalTypeChanged(FractalType value)

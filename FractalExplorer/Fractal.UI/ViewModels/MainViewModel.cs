@@ -309,10 +309,21 @@ public partial class MainViewModel : ObservableObject
     public void CancelSelection() => Navigation.CancelSelection();
     public void OnSizeChanged(int width, int height) => Navigation.OnSizeChanged(width, height);
 
-    // Stubs for new features
-    public bool IsColorPaletteEditorVisible { get; set; }
-    public IRelayCommand? OpenColorPaletteEditorCommand { get; set; }
-    public IRelayCommand? CloseColorPaletteEditorCommand { get; set; }
+    [ObservableProperty]
+    private bool _isColorPaletteEditorVisible;
+
+    [RelayCommand]
+    private void OpenColorPaletteEditor()
+    {
+        IsColorPaletteEditorVisible = true;
+        Rendering.OpenPaletteEditorCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void CloseColorPaletteEditor()
+    {
+        IsColorPaletteEditorVisible = false;
+    }
 
     [ObservableProperty]
     private bool _isMinimapVisible;

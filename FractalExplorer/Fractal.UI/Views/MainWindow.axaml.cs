@@ -8,6 +8,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Fractal.Core.Models;
+using Fractal.Core.Services;
 using Fractal.UI.ViewModels;
 
 namespace Fractal.UI.Views;
@@ -62,6 +63,16 @@ public partial class MainWindow : Window
                 WindowState = WindowState == WindowState.FullScreen
                     ? WindowState.Normal
                     : WindowState.FullScreen;
+            };
+
+            // Palette editor action delegate
+            vm.Rendering.OpenPaletteEditorAction = (palette) =>
+            {
+                var editorWindow = new PaletteEditorWindow
+                {
+                    DataContext = new PaletteEditorViewModel(new PaletteService(), vm.Rendering, palette)
+                };
+                editorWindow.Show();
             };
         }
     }

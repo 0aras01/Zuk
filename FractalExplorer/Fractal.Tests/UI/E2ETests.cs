@@ -1726,12 +1726,28 @@ public class E2ETests : IDisposable
 
     // --- New Features (Pending) ---
 
-    [Fact(Skip="Pending implementation")]
+    [Fact]
     public async Task Tier1_ColorPaletteEditor_ShowAndHide()
     {
         var vm = await CreateMainViewModelAsync();
         vm.OpenColorPaletteEditorCommand?.Execute(null);
         vm.IsColorPaletteEditorVisible.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Tier1_ColorPaletteEditor_LiveUpdatesRenderer()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.OpenColorPaletteEditorCommand?.Execute(null);
+        
+        var paletteService = new PaletteService();
+        var paletteEditorVm = new PaletteEditorViewModel(paletteService, vm.Rendering, vm.SelectedPalette);
+        
+        paletteEditorVm.PaletteName = "Live Edited Palette";
+        paletteEditorVm.Stops.Add(new GradientStopViewModel { Position = 0.5, R = 255, G = 100, B = 50 });
+        
+        vm.SelectedPalette.Name.Should().Be("Live Edited Palette");
+        vm.SelectedPalette.Stops.Should().Contain(s => s.R == 255 && s.G == 100 && s.B == 50);
     }
 
     [Fact]
