@@ -1772,12 +1772,30 @@ public class E2ETests : IDisposable
         (vm.MinimapViewportRect.X + vm.MinimapViewportRect.Width / 2).Should().BeInRange(75, 85);
     }
 
-    [Fact(Skip="Pending implementation")]
+    [Fact]
     public async Task Tier1_OrbitPath_ToggleVisibility()
     {
         var vm = await CreateMainViewModelAsync();
         vm.ToggleOrbitCommand?.Execute(null);
         vm.IsOrbitPathVisible.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Tier1_OrbitPath_CalculatePoints()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.IsOrbitPathVisible = true;
+        
+        // Calculate orbit for center (50, 50) on default 100x100 test canvas
+        vm.CalculateOrbit(new Point(50, 50));
+        
+        // For Mandelbrot, Orbit starts at (0,0) (pixel X=68, Y=50), second point is Z_1 = C (pixel X=50, Y=50)
+        vm.OrbitPoints.Should().NotBeEmpty();
+        vm.OrbitPoints.Count.Should().BeGreaterThanOrEqualTo(2);
+        vm.OrbitPoints[0].X.Should().BeApproximately(68, 2);
+        vm.OrbitPoints[0].Y.Should().BeApproximately(50, 2);
+        vm.OrbitPoints[1].X.Should().BeApproximately(50, 2);
+        vm.OrbitPoints[1].Y.Should().BeApproximately(50, 2);
     }
 
     [Fact(Skip="Pending implementation")]

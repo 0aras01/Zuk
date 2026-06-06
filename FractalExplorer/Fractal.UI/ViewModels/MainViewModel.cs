@@ -416,6 +416,7 @@ public partial class MainViewModel : ObservableObject
         if (height < 2.0) height = 2.0;
 
         MinimapViewportRect = new Rect(x, y, width, height);
+        RecalculateOrbitPixels();
     }
 
     public void OnMinimapClick(Point position)
@@ -455,8 +456,129 @@ public partial class MainViewModel : ObservableObject
         UpdateMinimapViewportRect();
     }
 
-    public bool IsOrbitPathVisible { get; set; }
-    public IRelayCommand? ToggleOrbitCommand { get; set; }
+    [ObservableProperty]
+    private bool _isOrbitPathVisible;
+
+    [RelayCommand]
+    private void ToggleOrbit()
+    {
+        IsOrbitPathVisible = !IsOrbitPathVisible;
+        if (!IsOrbitPathVisible)
+        {
+            _orbitComplexPoints.Clear();
+            OrbitPoints.Clear();
+        }
+    }
+
+    public ObservableCollection<Point> OrbitPoints { get; } = new();
+    private readonly System.Collections.Generic.List<(DoubleDouble real, DoubleDouble imag)> _orbitComplexPoints = new();
+
+    public void CalculateOrbit(Point pixelPos)
+    {
+        _orbitComplexPoints.Clear();
+        OrbitPoints.Clear();
+
+        if (!IsOrbitPathVisible)
+            return;
+
+        var viewport = Navigation.ZoomService.CurrentViewport;
+        var (clickReal, clickImag) = CoordinateMapper.PixelToComplex((int)pixelPos.X, (int)pixelPos.Y, viewport);
+
+        DoubleDouble zReal;
+        DoubleDouble zImag;
+        DoubleDouble cReal;
+        DoubleDouble cImag;
+
+        var type = Rendering.SelectedFractalType;
+        var maxIterations = Math.Min(Rendering.AdaptiveIterations, 500);
+
+        if (type == FractalType.Julia)
+        {
+            zReal = clickReal;
+            zImag = clickImag;
+            cReal = Rendering.GetJuliaCReal();
+            cImag = Rendering.GetJuliaCImag();
+        }
+        else
+        {
+            zReal = 0.0;
+            zImag = 0.0;
+            cReal = clickReal;
+            cImag = clickImag;
+        }
+
+        _orbitComplexPoints.Add((zReal, zImag));
+
+        int iterations = 0;
+        while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
+        {
+            DoubleDouble tempReal;
+            if (type == FractalType.BurningShip)
+            {
+                tempReal = zReal * zReal - zImag * zImag + cReal;
+                zImag = (zReal * zImag).Abs() * 2.0 + cImag;
+                zReal = tempReal;
+            }
+            else if (type == FractalType.Tricorn)
+            {
+                tempReal = zReal * zReal - zImag * zImag + cReal;
+                zImag = zReal * zImag * -2.0 + cImag;
+                zReal = tempReal;
+            }
+            else if (type == FractalType.Celtic)
+            {
+                tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
+                zImag = zReal * zImag * 2.0 + cImag;
+                zReal = tempReal;
+            }
+            else if (type == FractalType.Buffalo)
+            {
+                tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
+                zImag = (zReal * zImag).Abs() * 2.0 + cImag;
+                zReal = tempReal;
+            }
+            else if (type == FractalType.Multibrot3)
+            {
+                tempReal = zReal * (zReal * zReal - zImag * zImag * 3.0) + cReal;
+                zImag = zImag * (zReal * zReal * 3.0 - zImag * zImag) + cImag;
+                zReal = tempReal;
+            }
+            else // Mandelbrot & Julia
+            {
+                tempReal = zReal * zReal - zImag * zImag + cReal;
+                zImag = zReal * zImag * 2.0 + cImag;
+                zReal = tempReal;
+            }
+
+            _orbitComplexPoints.Add((zReal, zImag));
+            iterations++;
+        }
+
+        RecalculateOrbitPixels();
+    }
+
+    public void RecalculateOrbitPixels()
+    {
+        if (!IsOrbitPathVisible || _orbitComplexPoints.Count == 0)
+        {
+            OrbitPoints.Clear();
+            return;
+        }
+
+        var viewport = Navigation.ZoomService.CurrentViewport;
+        var points = new System.Collections.Generic.List<Point>(_orbitComplexPoints.Count);
+        foreach (var (r, i) in _orbitComplexPoints)
+        {
+            var (x, y) = CoordinateMapper.ComplexToPixel(r, i, viewport);
+            points.Add(new Point(x, y));
+        }
+
+        OrbitPoints.Clear();
+        foreach (var pt in points)
+        {
+            OrbitPoints.Add(pt);
+        }
+    }
 
     public bool Is3DShadingEnabled { get; set; }
     public IRelayCommand? Toggle3DShadingCommand { get; set; }

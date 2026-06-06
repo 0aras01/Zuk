@@ -167,4 +167,7 @@
   <data name="Minimap" xml:space="preserve">
     <value>Pokaż minimapę</value>
   </data>
+  <data name="OrbitPath" xml:space="preserve">
+    <value>Orbita punktu (O)</value>
+  </data>
 </root>

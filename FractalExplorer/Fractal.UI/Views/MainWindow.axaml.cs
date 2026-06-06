@@ -82,6 +82,19 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel vm)
         {
             var point = e.GetCurrentPoint(sender as Control);
+            var isCtrlPressed = (e.KeyModifiers & KeyModifiers.Control) == KeyModifiers.Control;
+
+            if (point.Properties.IsLeftButtonPressed && (isCtrlPressed || vm.IsOrbitPathVisible))
+            {
+                if (isCtrlPressed)
+                {
+                    vm.IsOrbitPathVisible = true;
+                }
+                vm.CalculateOrbit(point.Position);
+                e.Handled = true;
+                return;
+            }
+
             if (point.Properties.IsLeftButtonPressed)
             {
                 vm.Navigation.OnPointerPressed(point.Position);
@@ -212,6 +225,12 @@ public partial class MainWindow : Window
             // D key: toggle diagnostics panel
             case Key.D:
                 vm.Diagnostics.IsDiagnosticsVisible = !vm.Diagnostics.IsDiagnosticsVisible;
+                e.Handled = true;
+                break;
+
+            // O key: toggle orbit path
+            case Key.O:
+                vm.ToggleOrbitCommand?.Execute(null);
                 e.Handled = true;
                 break;
 

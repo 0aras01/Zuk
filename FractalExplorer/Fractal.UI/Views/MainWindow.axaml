@@ -47,6 +47,14 @@
                        StrokeThickness="2"
                        StrokeDashArray="4,4"
                        Fill="#40FFFFFF" />
+
+            <!-- Orbit Path Overlay -->
+            <Polyline IsVisible="{Binding IsOrbitPathVisible}"
+                      Points="{Binding OrbitPoints}"
+                      Stroke="#FF9E00"
+                      StrokeThickness="2"
+                      StrokeJoin="Round"
+                      StrokeLineCap="Round" />
         </Canvas>
 
         <!-- Floating UI Overlays Container (HitTest is transparent so clicks pass through to Canvas) -->
@@ -171,6 +179,11 @@
                             <!-- Minimap Toggle -->
                             <CheckBox IsChecked="{Binding IsMinimapVisible}"
                                       Content="{Binding [Minimap], Source={x:Static services:LocalizationService.Instance}}"
+                                      Foreground="White" FontSize="12" Margin="0,4,0,0"/>
+
+                            <!-- Orbit Path Toggle -->
+                            <CheckBox IsChecked="{Binding IsOrbitPathVisible}"
+                                      Content="{Binding [OrbitPath], Source={x:Static services:LocalizationService.Instance}}"
                                       Foreground="White" FontSize="12" Margin="0,4,0,0"/>
 
                             <Separator Height="1" Background="#20FFFFFF"/>
