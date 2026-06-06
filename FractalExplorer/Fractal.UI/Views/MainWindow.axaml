@@ -103,7 +103,7 @@
                     <Separator Margin="0,2" Height="1" Background="#20FFFFFF"/>
                     
                     <TextBlock Text="{Binding [CenterCoordinates], Source={x:Static services:LocalizationService.Instance}}" Foreground="#A0FFFFFF" FontSize="11"/>
-                    <TextBlock Text="{Binding Diagnostics.CenterCoordinatesText}" Foreground="#FFCC00" FontSize="10" FontFamily="Consolas,Monospace" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Diagnostics.CenterCoordinatesText}" Foreground="#FFCC00" FontSize="10" FontFamily="Consolas,Monospace" TextWrapping="Wrap" Cursor="Hand" PointerPressed="CenterCoordinates_PointerPressed" ToolTip.Tip="Click to copy full precision coordinates"/>
                 </StackPanel>
             </Border>
 
@@ -184,6 +184,11 @@
                             <!-- Orbit Path Toggle -->
                             <CheckBox IsChecked="{Binding IsOrbitPathVisible}"
                                       Content="{Binding [OrbitPath], Source={x:Static services:LocalizationService.Instance}}"
+                                      Foreground="White" FontSize="12" Margin="0,4,0,0"/>
+
+                            <!-- Scientific Notation Toggle -->
+                            <CheckBox IsChecked="{Binding IsScientificNotationEnabled}"
+                                      Content="{Binding [ScientificNotation], Source={x:Static services:LocalizationService.Instance}}"
                                       Foreground="White" FontSize="12" Margin="0,4,0,0"/>
 
                             <Separator Height="1" Background="#20FFFFFF"/>
@@ -325,7 +330,10 @@
                                FontFamily="Consolas,Monospace"
                                FontSize="11"
                                VerticalAlignment="Center"
-                               MinWidth="220"/>
+                               MinWidth="220"
+                               Cursor="Hand"
+                               PointerPressed="CursorCoordinates_PointerPressed"
+                               ToolTip.Tip="Click to copy full precision coordinates"/>
                     
                     <!-- App Status Message -->
                     <TextBlock Grid.Column="1"

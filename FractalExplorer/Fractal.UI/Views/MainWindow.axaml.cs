@@ -57,6 +57,16 @@ public partial class MainWindow : Window
                 }
             };
 
+            // Text copy delegate
+            vm.CopyTextToClipboardAction = async (text) =>
+            {
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard != null)
+                {
+                    await clipboard.SetTextAsync(text);
+                }
+            };
+
             // Fullscreen toggle delegate
             vm.ToggleFullscreenAction = () =>
             {
@@ -314,6 +324,24 @@ public partial class MainWindow : Window
                 vm.OnMinimapClick(point.Position);
                 e.Handled = true;
             }
+        }
+    }
+
+    private void CursorCoordinates_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            vm.CopyCursorCoordinatesToClipboardCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void CenterCoordinates_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            vm.CopyCenterCoordinatesToClipboardCommand.Execute(null);
+            e.Handled = true;
         }
     }
 }

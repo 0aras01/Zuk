@@ -1839,4 +1839,52 @@ public class E2ETests : IDisposable
         vm.ToggleSplitViewCommand?.Execute(null);
         vm.IsSplitViewEnabled.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Tier1_ScientificNotation_Toggle()
+    {
+        var vm = await CreateMainViewModelAsync();
+        vm.IsScientificNotationEnabled = false;
+        
+        vm.Navigation.UpdateCursorCoordinates(new Point(50, 50));
+        var stdCursorText = vm.CursorCoordinatesText;
+        
+        vm.IsScientificNotationEnabled = true;
+        var sciCursorText = vm.CursorCoordinatesText;
+        
+        stdCursorText.Should().NotContain("E-01");
+        sciCursorText.Should().Contain("E-01");
+        sciCursorText.Should().NotBe(stdCursorText);
+    }
+
+    [Fact]
+    public async Task Tier1_ScientificNotation_ClipboardCopy()
+    {
+        var vm = await CreateMainViewModelAsync();
+        
+        string? copiedText = null;
+        vm.CopyTextToClipboardAction = async (text) =>
+        {
+            copiedText = text;
+            await Task.CompletedTask;
+        };
+        
+        vm.Navigation.UpdateCursorCoordinates(new Point(50, 50));
+        
+        // Execute copy cursor command
+        await vm.CopyCursorCoordinatesToClipboardCommand.ExecuteAsync(null);
+        
+        copiedText.Should().NotBeNull();
+        copiedText.Should().Contain("Re: ");
+        copiedText.Should().Contain("Im: ");
+        
+        copiedText = null;
+        
+        // Execute copy center command
+        await vm.CopyCenterCoordinatesToClipboardCommand.ExecuteAsync(null);
+        
+        copiedText.Should().NotBeNull();
+        copiedText.Should().Contain("Re: ");
+        copiedText.Should().Contain("Im: ");
+    }
 }

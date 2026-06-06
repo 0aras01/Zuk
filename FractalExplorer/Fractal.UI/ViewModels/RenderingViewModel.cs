@@ -288,8 +288,16 @@ public partial class RenderingViewModel : ObservableObject
                 var spanReal = viewport.Plane.RealMax - viewport.Plane.RealMin;
                 var spanImag = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
 
-                Main.Diagnostics.CenterCoordinatesText = $"Re: {centerReal.ToFullString()}\nIm: {centerImag.ToFullString()}";
-                Main.Diagnostics.SpanText = $"{spanReal.ToFullString()} × {spanImag.ToFullString()}";
+                if (Main.IsScientificNotationEnabled)
+                {
+                    Main.Diagnostics.CenterCoordinatesText = $"Re: {((double)centerReal):E10}\nIm: {((double)centerImag):E10}";
+                    Main.Diagnostics.SpanText = $"{((double)spanReal):E10} × {((double)spanImag):E10}";
+                }
+                else
+                {
+                    Main.Diagnostics.CenterCoordinatesText = $"Re: {centerReal.ToFullString()}\nIm: {centerImag.ToFullString()}";
+                    Main.Diagnostics.SpanText = $"{spanReal.ToFullString()} × {spanImag.ToFullString()}";
+                }
                 Main.Diagnostics.ResolutionText = $"{viewport.ImageWidth} × {viewport.ImageHeight}";
                 Main.Diagnostics.RenderTimeText = $"{stopwatch.ElapsedMilliseconds} ms";
                 Main.Diagnostics.IterationsText = $"{iterations}";

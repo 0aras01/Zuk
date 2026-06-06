@@ -31,6 +31,7 @@ public partial class MainViewModel : ObservableObject
     public string[] Languages { get; } = new[] { "EN", "PL" };
 
     public Func<Task>? CopyToClipboardAction { get; set; }
+    public Func<string, Task>? CopyTextToClipboardAction { get; set; }
     public Func<Task<string?>>? SaveFileDialogAction { get; set; }
     public Action? ToggleFullscreenAction { get; set; }
 
@@ -593,4 +594,64 @@ public partial class MainViewModel : ObservableObject
 
     public bool IsSplitViewEnabled { get; set; }
     public IRelayCommand? ToggleSplitViewCommand { get; set; }
+
+    [ObservableProperty]
+    private bool _isScientificNotationEnabled;
+
+    [RelayCommand]
+    private void ToggleScientificNotation()
+    {
+        IsScientificNotationEnabled = !IsScientificNotationEnabled;
+    }
+
+    partial void OnIsScientificNotationEnabledChanged(bool value)
+    {
+        UpdateCoordinatesTexts();
+        Navigation.RefreshCursorCoordinatesText();
+    }
+
+    public void UpdateCoordinatesTexts()
+    {
+        var viewport = Navigation.ZoomService.CurrentViewport;
+        var centerReal = (viewport.Plane.RealMin + viewport.Plane.RealMax) * 0.5;
+        var centerImag = (viewport.Plane.ImagMin + viewport.Plane.ImagMax) * 0.5;
+        var spanReal = viewport.Plane.RealMax - viewport.Plane.RealMin;
+        var spanImag = viewport.Plane.ImagMax - viewport.Plane.ImagMin;
+
+        if (IsScientificNotationEnabled)
+        {
+            Diagnostics.CenterCoordinatesText = $"Re: {((double)centerReal):E10}\nIm: {((double)centerImag):E10}";
+            Diagnostics.SpanText = $"{((double)spanReal):E10} × {((double)spanImag):E10}";
+        }
+        else
+        {
+            Diagnostics.CenterCoordinatesText = $"Re: {centerReal.ToFullString()}\nIm: {centerImag.ToFullString()}";
+            Diagnostics.SpanText = $"{spanReal.ToFullString()} × {spanImag.ToFullString()}";
+        }
+    }
+
+    [RelayCommand]
+    public async Task CopyCenterCoordinatesToClipboardAsync()
+    {
+        var viewport = Navigation.ZoomService.CurrentViewport;
+        var centerReal = (viewport.Plane.RealMin + viewport.Plane.RealMax) * 0.5;
+        var centerImag = (viewport.Plane.ImagMin + viewport.Plane.ImagMax) * 0.5;
+        string text = $"Re: {centerReal.ToFullString()}\nIm: {centerImag.ToFullString()}";
+        if (CopyTextToClipboardAction != null)
+        {
+            await CopyTextToClipboardAction(text);
+            StatusText = LocalizationService.Instance["StatusCoordinatesCopied"] ?? "Coordinates copied to clipboard";
+        }
+    }
+
+    [RelayCommand]
+    public async Task CopyCursorCoordinatesToClipboardAsync()
+    {
+        string text = $"Re: {Navigation.LastCursorRe.ToFullString()}\nIm: {Navigation.LastCursorIm.ToFullString()}";
+        if (CopyTextToClipboardAction != null)
+        {
+            await CopyTextToClipboardAction(text);
+            StatusText = LocalizationService.Instance["StatusCoordinatesCopied"] ?? "Coordinates copied to clipboard";
+        }
+    }
 }

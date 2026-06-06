@@ -372,15 +372,32 @@ public partial class NavigationViewModel : ObservableObject
         Main.Rendering.RequestRender();
     }
 
+    public DoubleDouble LastCursorRe { get; private set; } = 0.0;
+    public DoubleDouble LastCursorIm { get; private set; } = 0.0;
+
     public void UpdateCursorCoordinates(Point position)
     {
         var viewport = _zoomService.CurrentViewport;
         if (viewport.ImageWidth <= 0 || viewport.ImageHeight <= 0) return;
 
         var (re, im) = CoordinateMapper.PixelToComplex((int)position.X, (int)position.Y, viewport);
-        string sign = (double)im >= 0 ? "+" : "-";
-        DoubleDouble absIm = im.Abs();
-        CursorCoordinatesText = $"z = {(double)re:G6} {sign} {(double)absIm:G6}i";
+        LastCursorRe = re;
+        LastCursorIm = im;
+        RefreshCursorCoordinatesText();
+    }
+
+    public void RefreshCursorCoordinatesText()
+    {
+        string sign = (double)LastCursorIm >= 0 ? "+" : "-";
+        DoubleDouble absIm = LastCursorIm.Abs();
+        if (Main.IsScientificNotationEnabled)
+        {
+            CursorCoordinatesText = $"z = {((double)LastCursorRe):E6} {sign} {((double)absIm):E6}i";
+        }
+        else
+        {
+            CursorCoordinatesText = $"z = {((double)LastCursorRe):G6} {sign} {((double)absIm):G6}i";
+        }
     }
 
     public void CancelSelection()

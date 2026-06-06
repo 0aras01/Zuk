@@ -170,4 +170,10 @@
   <data name="OrbitPath" xml:space="preserve">
     <value>Orbita punktu (O)</value>
   </data>
+  <data name="StatusCoordinatesCopied" xml:space="preserve">
+    <value>Współrzędne skopiowane do schowka</value>
+  </data>
+  <data name="ScientificNotation" xml:space="preserve">
+    <value>Notacja naukowa</value>
+  </data>
 </root>
