@@ -1625,4 +1625,47 @@ public class E2ETests : IDisposable
         await vm.GenerateFractalCommand.ExecuteAsync(null);
         vm.SelectedFractalType.Should().Be(FractalType.Mandelbrot);
     }
+
+    // ==========================================
+    // TIER 5: ADVERSARIAL HARDENING (1 TEST)
+    // ==========================================
+
+    [Fact]
+    public async Task Tier5_Adversarial_ExtremeInputsAndCancellation()
+    {
+        var vm = await CreateMainViewModelAsync();
+
+        // 1. Extreme Size changes
+        vm.OnSizeChanged(1, 1);
+        await vm.GenerateFractalCommand.ExecuteAsync(null);
+        vm.OnSizeChanged(1000, 1000);
+        await vm.GenerateFractalCommand.ExecuteAsync(null);
+
+        // 2. Invalid inputs for Julia Set
+        vm.SelectedFractalType = FractalType.Julia;
+        vm.JuliaReal = "NOT_A_NUMBER";
+        vm.JuliaImag = "DROP_TABLE";
+        await vm.GenerateFractalCommand.ExecuteAsync(null);
+
+        // Ensure default fallbacks work cleanly without crash
+        vm.Rendering.GetJuliaCReal().Hi.Should().Be(-0.7);
+
+        // 3. Spammed commands
+        for(int i = 0; i < 10; i++)
+        {
+            vm.ZoomCentered(true);
+            vm.PanByPercent(0.5, 0.5);
+            vm.CancelRenderCommand.Execute(null);
+        }
+
+        // 4. Force extreme out of bounds selection
+        vm.OnPointerPressed(new Point(-5000, -5000));
+        vm.OnPointerMoved(new Point(50000, 50000));
+        vm.OnPointerReleased(new Point(50000, 50000));
+
+        // 5. Final validation - the application state should still allow basic rendering
+        vm.ResetCommand.Execute(null);
+        await vm.GenerateFractalCommand.ExecuteAsync(null);
+        vm.FractalImage.Should().NotBeNull();
+    }
 }
