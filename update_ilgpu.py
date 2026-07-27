@@ -1,4 +1,7 @@
-using System;
+import re
+
+with open('FractalExplorer/Fractal.Compute/ILGPUFractalGenerator.cs', 'w', encoding='utf-8') as f:
+    f.write("""using System;
 using System.Threading;
 using System.Threading.Tasks;
 using ILGPU;
@@ -363,3 +366,4 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         _disposed = true;
     }
 }
+""")

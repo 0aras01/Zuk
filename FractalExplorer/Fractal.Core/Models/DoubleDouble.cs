@@ -3,8 +3,14 @@ using System.Runtime.CompilerServices;
 
 namespace Fractal.Core.Models;
 
-public readonly struct DoubleDouble
+public readonly struct DoubleDouble : IEquatable<DoubleDouble>
 {
+
+    public static readonly DoubleDouble Zero = new DoubleDouble(0.0, 0.0);
+    public static readonly DoubleDouble One = new DoubleDouble(1.0, 0.0);
+    public static readonly DoubleDouble Two = new DoubleDouble(2.0, 0.0);
+    public static readonly DoubleDouble Four = new DoubleDouble(4.0, 0.0);
+
     public readonly double Hi;
     public readonly double Lo;
 
@@ -61,7 +67,14 @@ public readonly struct DoubleDouble
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DoubleDouble operator -(DoubleDouble a, DoubleDouble b)
     {
-        return a + (-b);
+        double s = a.Hi - b.Hi;
+        double v = s - a.Hi;
+        double e = (a.Hi - (s - v)) - (b.Hi + v);
+        e += a.Lo - b.Lo;
+
+        double rHi = s + e;
+        double rLo = e - (rHi - s);
+        return new DoubleDouble(rHi, rLo);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -101,10 +114,28 @@ public readonly struct DoubleDouble
         return a * new DoubleDouble(b, 0.0);
     }
 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static DoubleDouble operator /(DoubleDouble a, DoubleDouble b)
+    {
+        double q1 = a.Hi / b.Hi;
+        DoubleDouble r = a - b * q1;
+        double q2 = r.Hi / b.Hi;
+
+        double rHi = q1 + q2;
+        double rLo = q2 - (rHi - q1);
+        return new DoubleDouble(rHi, rLo);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DoubleDouble operator /(DoubleDouble a, double b)
     {
-        return a * (1.0 / b);
+        double q1 = a.Hi / b;
+        double q2 = a.Lo / b;
+
+        double rHi = q1 + q2;
+        double rLo = q2 - (rHi - q1);
+        return new DoubleDouble(rHi, rLo);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -146,8 +177,41 @@ public readonly struct DoubleDouble
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public DoubleDouble Abs()
     {
-        return Hi < 0.0 ? -this : this;
+        if (Hi < 0.0 || (Hi == 0.0 && Lo < 0.0))
+            return -this;
+        return this;
     }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator >=(DoubleDouble a, DoubleDouble b) => a.Hi > b.Hi || (a.Hi == b.Hi && a.Lo >= b.Lo);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator <=(DoubleDouble a, DoubleDouble b) => a.Hi < b.Hi || (a.Hi == b.Hi && a.Lo <= b.Lo);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator >=(DoubleDouble a, double b) => a.Hi > b || (a.Hi == b && a.Lo >= 0.0);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator <=(DoubleDouble a, double b) => a.Hi < b || (a.Hi == b && a.Lo <= 0.0);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator ==(DoubleDouble a, DoubleDouble b) => a.Hi == b.Hi && a.Lo == b.Lo;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator !=(DoubleDouble a, DoubleDouble b) => a.Hi != b.Hi || a.Lo != b.Lo;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator ==(DoubleDouble a, double b) => a.Hi == b && a.Lo == 0.0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator !=(DoubleDouble a, double b) => a.Hi != b || a.Lo != 0.0;
+
+    public override bool Equals(object? obj) => obj is DoubleDouble other && this == other;
+
+    public bool Equals(DoubleDouble other) => this == other;
+
+    public override int GetHashCode() => HashCode.Combine(Hi, Lo);
 
     public override string ToString()
     {
