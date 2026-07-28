@@ -97,7 +97,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         else
         {
             double t = smoothIter / p.MaxIterations;
-            int lutIndex = (int)(t * (4096 - 1)) * 4;
+            int lutIndex = (int)(t * (LutSize - 1)) * 4;
             outputPixels[offset] = lut[lutIndex];
             outputPixels[offset + 1] = lut[lutIndex + 1];
             outputPixels[offset + 2] = lut[lutIndex + 2];
@@ -196,7 +196,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
         {
             DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
-            zImag = zReal * zImag * new DoubleDouble(-2.0, 0.0) + cImag;
+            zImag = zReal * zImag * -DoubleDouble.Two + cImag;
             zReal = tempReal;
             iterations++;
         }
@@ -272,7 +272,7 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         MapCoordinates(index, p, out DoubleDouble cReal, out DoubleDouble cImag);
         DoubleDouble zReal = DoubleDouble.Zero;
         DoubleDouble zImag = DoubleDouble.Zero;
-        DoubleDouble three = new DoubleDouble(3.0, 0.0);
+        DoubleDouble three = 3.0;
 
         int iterations = 0;
         while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
