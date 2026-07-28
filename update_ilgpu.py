@@ -1,37 +1,57 @@
 import re
 
-with open('FractalExplorer/Fractal.Compute/ILGPUFractalGenerator.cs', 'w', encoding='utf-8') as f:
-    f.write("""using System;
-using System.Threading;
-using System.Threading.Tasks;
+with open('FractalExplorer/Fractal.Compute/ILGPUFractalGenerator.cs', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Make the changes exactly as done before, but with the KernelAction refactor
+
+alias = """using System.Threading.Tasks;
 using ILGPU;
 using ILGPU.Runtime;
 using Fractal.Core.Models;
 using Fractal.Core.Services;
 using Fractal.Core.Exceptions;
 
-namespace Fractal.Compute;
+using KernelAction = System.Action<
+    ILGPU.Index1D,
+    ILGPU.Runtime.ArrayView1D<double, ILGPU.Runtime.Stride1D.Dense>,
+    ILGPU.Runtime.ArrayView1D<byte, ILGPU.Runtime.Stride1D.Dense>,
+    ILGPU.Runtime.ArrayView1D<byte, ILGPU.Runtime.Stride1D.Dense>,
+    Fractal.Core.Models.FractalParams>;
+"""
 
-public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
-{
-    private readonly Context _context;
-    private readonly Accelerator _accelerator;
+content = content.replace("""using System.Threading.Tasks;
+using ILGPU;
+using ILGPU.Runtime;
+using Fractal.Core.Models;
+using Fractal.Core.Services;""", alias)
+
+# Add members
+members = """
     private bool _disposed = false;
     private const int LutSize = 4096;
 
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> _mandelbrotKernel;
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> _juliaKernel;
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> _burningShipKernel;
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> _tricornKernel;
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> _celticKernel;
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> _buffaloKernel;
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> _multibrot3Kernel;
+    private readonly KernelAction _mandelbrotKernel;
+    private readonly KernelAction _juliaKernel;
+    private readonly KernelAction _burningShipKernel;
+    private readonly KernelAction _tricornKernel;
+    private readonly KernelAction _celticKernel;
+    private readonly KernelAction _buffaloKernel;
+    private readonly KernelAction _multibrot3Kernel;"""
 
-    public string Name => $"GPU (ILGPU - {_accelerator.Name})";
+content = re.sub(r'    private readonly Action.*?_kernel;', members, content, flags=re.DOTALL)
 
-    public bool IsGpuAccelerated => true;
+# Constructor
+constructor_old = """    public ILGPUFractalGenerator()
+    {
+        _context = Context.CreateDefault();
+        _accelerator = _context.GetPreferredDevice(preferCPU: false).CreateAccelerator(_context);
 
-    public ILGPUFractalGenerator()
+        _kernel = _accelerator.LoadAutoGroupedStreamKernel<
+            Index1D, ArrayView1D<double, Stride1D.Dense>, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble>(FractalKernel);
+    }"""
+
+constructor_new = """    public ILGPUFractalGenerator()
     {
         _context = Context.CreateDefault();
         try
@@ -44,23 +64,99 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
             throw new GpuAccelerationNotAvailableException("No suitable GPU accelerator was found.", ex);
         }
 
-        _mandelbrotKernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(MandelbrotKernel);
-        _juliaKernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(JuliaKernel);
-        _burningShipKernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(BurningShipKernel);
-        _tricornKernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(TricornKernel);
-        _celticKernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(CelticKernel);
-        _buffaloKernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(BuffaloKernel);
-        _multibrot3Kernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(Multibrot3Kernel);
+        _mandelbrotKernel = LoadKernel(MandelbrotKernel);
+        _juliaKernel = LoadKernel(JuliaKernel);
+        _burningShipKernel = LoadKernel(BurningShipKernel);
+        _tricornKernel = LoadKernel(TricornKernel);
+        _celticKernel = LoadKernel(CelticKernel);
+        _buffaloKernel = LoadKernel(BuffaloKernel);
+        _multibrot3Kernel = LoadKernel(Multibrot3Kernel);
     }
 
-    private static void MapCoordinates(Index1D index, FractalParams p, out DoubleDouble real, out DoubleDouble imag)
+    private KernelAction LoadKernel(KernelAction kernelMethod)
+    {
+        return _accelerator.LoadAutoGroupedStreamKernel<
+            Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams>(kernelMethod);
+    }"""
+
+content = content.replace(constructor_old, constructor_new)
+
+# GenerateAsync
+generate_old = r'    public Task.*?    public void Dispose\(\)'
+
+generate_new = """    public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
+    {
+        return Task.Run(() =>
+        {
+            ct.ThrowIfCancellationRequested();
+
+            int totalPixels = viewport.ImageWidth * viewport.ImageHeight;
+
+            using var iterationsBuffer = _accelerator.Allocate1D<double>(totalPixels);
+            using var pixelsBuffer = _accelerator.Allocate1D<byte>(totalPixels * 4);
+
+            // Generowanie tablicy LUT (Look-Up Table) na CPU i kopiowanie na GPU
+            byte[] lutData = new byte[LutSize * 4];
+            for (int i = 0; i < LutSize; i++)
+            {
+                double t = (double)i / (LutSize - 1);
+                palette.GetColor(t, paletteOffset, out byte r, out byte g, out byte b);
+                lutData[i * 4] = b;
+                lutData[i * 4 + 1] = g;
+                lutData[i * 4 + 2] = r;
+                lutData[i * 4 + 3] = 255;
+            }
+            using var lutBuffer = _accelerator.Allocate1D<byte>(lutData);
+
+            FractalParams parameters = new FractalParams
+            {
+                Width = viewport.ImageWidth,
+                Height = viewport.ImageHeight,
+                MaxIterations = maxIterations,
+                RealMin = viewport.Plane.RealMin,
+                RealMax = viewport.Plane.RealMax,
+                ImagMin = viewport.Plane.ImagMin,
+                ImagMax = viewport.Plane.ImagMax,
+                JuliaCReal = settings.JuliaCReal,
+                JuliaCImag = settings.JuliaCImag
+            };
+
+            // Wybór odpowiedniego kernela bez warp divergence!
+            KernelAction selectedKernel = settings.Type switch
+            {
+                FractalType.Julia => _juliaKernel,
+                FractalType.BurningShip => _burningShipKernel,
+                FractalType.Tricorn => _tricornKernel,
+                FractalType.Celtic => _celticKernel,
+                FractalType.Buffalo => _buffaloKernel,
+                FractalType.Multibrot3 => _multibrot3Kernel,
+                _ => _mandelbrotKernel
+            };
+
+            selectedKernel(
+                totalPixels,
+                iterationsBuffer.View,
+                pixelsBuffer.View,
+                lutBuffer.View,
+                parameters);
+
+            ct.ThrowIfCancellationRequested();
+
+            // Kopiowanie wyników z powrotem do CPU (GetAsArray1D domyślnie czeka na strumień)
+            double[] iterations = iterationsBuffer.GetAsArray1D();
+            byte[] pixels = pixelsBuffer.GetAsArray1D();
+
+            return (pixels, iterations);
+        }, ct);
+    }
+
+    public void Dispose()"""
+
+content = re.sub(generate_old, generate_new, content, flags=re.DOTALL)
+
+
+# Kernels
+kernels = """    private static void MapCoordinates(Index1D index, FractalParams p, out DoubleDouble real, out DoubleDouble imag)
     {
         int x = index % p.Width;
         int y = index / p.Width;
@@ -288,75 +384,17 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         }
 
         WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
-    }
+    }"""
 
-    public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
+content = re.sub(r'    public static void FractalKernel.*?    public Task', kernels + '\n\n    public Task', content, flags=re.DOTALL)
+
+dispose_old = """    public void Dispose()
     {
-        return Task.Run(() =>
-        {
-            ct.ThrowIfCancellationRequested();
+        _accelerator?.Dispose();
+        _context?.Dispose();
+    }"""
 
-            int totalPixels = viewport.ImageWidth * viewport.ImageHeight;
-
-            using var iterationsBuffer = _accelerator.Allocate1D<double>(totalPixels);
-            using var pixelsBuffer = _accelerator.Allocate1D<byte>(totalPixels * 4);
-
-            // Generowanie tablicy LUT (Look-Up Table) na CPU i kopiowanie na GPU
-            byte[] lutData = new byte[LutSize * 4];
-            for (int i = 0; i < LutSize; i++)
-            {
-                double t = (double)i / (LutSize - 1);
-                palette.GetColor(t, paletteOffset, out byte r, out byte g, out byte b);
-                lutData[i * 4] = b;
-                lutData[i * 4 + 1] = g;
-                lutData[i * 4 + 2] = r;
-                lutData[i * 4 + 3] = 255;
-            }
-            using var lutBuffer = _accelerator.Allocate1D<byte>(lutData);
-
-            FractalParams parameters = new FractalParams
-            {
-                Width = viewport.ImageWidth,
-                Height = viewport.ImageHeight,
-                MaxIterations = maxIterations,
-                RealMin = viewport.Plane.RealMin,
-                RealMax = viewport.Plane.RealMax,
-                ImagMin = viewport.Plane.ImagMin,
-                ImagMax = viewport.Plane.ImagMax,
-                JuliaCReal = settings.JuliaCReal,
-                JuliaCImag = settings.JuliaCImag
-            };
-
-            // Wybór odpowiedniego kernela bez warp divergence!
-            Action<Index1D, ArrayView1D<double, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, ArrayView1D<byte, Stride1D.Dense>, FractalParams> selectedKernel = settings.Type switch
-            {
-                FractalType.Julia => _juliaKernel,
-                FractalType.BurningShip => _burningShipKernel,
-                FractalType.Tricorn => _tricornKernel,
-                FractalType.Celtic => _celticKernel,
-                FractalType.Buffalo => _buffaloKernel,
-                FractalType.Multibrot3 => _multibrot3Kernel,
-                _ => _mandelbrotKernel
-            };
-
-            selectedKernel(
-                totalPixels,
-                iterationsBuffer.View,
-                pixelsBuffer.View,
-                lutBuffer.View,
-                parameters);
-
-            ct.ThrowIfCancellationRequested();
-
-            // Kopiowanie wyników z powrotem do CPU (GetAsArray1D domyślnie czeka na strumień)
-            double[] iterations = iterationsBuffer.GetAsArray1D();
-            byte[] pixels = pixelsBuffer.GetAsArray1D();
-
-            return (pixels, iterations);
-        }, ct);
-    }
-
-    public void Dispose()
+dispose_new = """    public void Dispose()
     {
         if (_disposed) return;
 
@@ -364,6 +402,9 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
         _context?.Dispose();
 
         _disposed = true;
-    }
-}
-""")
+    }"""
+
+content = content.replace(dispose_old, dispose_new)
+
+with open('FractalExplorer/Fractal.Compute/ILGPUFractalGenerator.cs', 'w', encoding='utf-8') as f:
+    f.write(content)
