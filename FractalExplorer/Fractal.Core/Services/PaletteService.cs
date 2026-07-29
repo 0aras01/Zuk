@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions;
 using System.Text.Json;
 using Fractal.Core.Models;
 
@@ -16,15 +17,17 @@ public class PaletteService : IPaletteService
 {
     private readonly string _filePath;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly IFileSystem _fileSystem;
 
-    public PaletteService()
+    public PaletteService(IFileSystem? fileSystem = null)
     {
-        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FractalExplorer");
-        if (!Directory.Exists(folder))
+        _fileSystem = fileSystem ?? new FileSystem();
+        string folder = _fileSystem.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FractalExplorer");
+        if (!_fileSystem.Directory.Exists(folder))
         {
-            Directory.CreateDirectory(folder);
+            _fileSystem.Directory.CreateDirectory(folder);
         }
-        _filePath = Path.Combine(folder, "palettes.json");
+        _filePath = _fileSystem.Path.Combine(folder, "palettes.json");
 
         _jsonOptions = new JsonSerializerOptions
         {
@@ -34,7 +37,7 @@ public class PaletteService : IPaletteService
 
     public List<GradientPalette> LoadPalettes()
     {
-        if (!File.Exists(_filePath))
+        if (!_fileSystem.File.Exists(_filePath))
         {
             var defaults = GetDefaultPalettes();
             SavePalettes(defaults);
@@ -43,7 +46,7 @@ public class PaletteService : IPaletteService
 
         try
         {
-            string json = File.ReadAllText(_filePath);
+            string json = _fileSystem.File.ReadAllText(_filePath);
             var list = JsonSerializer.Deserialize<List<GradientPalette>>(json, _jsonOptions) ?? new List<GradientPalette>();
             var defaults = GetDefaultPalettes();
             defaults.AddRange(list);
@@ -69,7 +72,7 @@ public class PaletteService : IPaletteService
                 }
             }
             string json = JsonSerializer.Serialize(customPalettes, _jsonOptions);
-            File.WriteAllText(_filePath, json);
+            _fileSystem.File.WriteAllText(_filePath, json);
         }
         catch
         {
