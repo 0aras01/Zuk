@@ -1,0 +1,25 @@
+--- FractalExplorer/Fractal.UI/ViewModels/RenderingViewModel.cs
++++ FractalExplorer/Fractal.UI/ViewModels/RenderingViewModel.cs
+@@ -83,14 +83,12 @@
+     public RenderingViewModel()
+     {
+         _gpuGenerator = new ParallelFractalGenerator();
+-        _ = InitializeAsync();
+     }
+
+     public RenderingViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService, ILogger<RenderingViewModel> logger)
+     {
+         _gpuGenerator = fractalGenerator;
+         _logger = logger;
+-        _ = InitializeAsync();
+     }
+
+     public async Task InitializeAsync()
+@@ -98,6 +96,8 @@
+         var paletteService = new PaletteService();
+         var palettes = await paletteService.LoadPalettesAsync();
++
++        Palettes.Clear();
+         foreach (var p in palettes)
+         {
+             Palettes.Add(p);

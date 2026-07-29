@@ -1,0 +1,15 @@
+--- FractalExplorer/Fractal.UI/App.axaml.cs
++++ FractalExplorer/Fractal.UI/App.axaml.cs
+@@ -76,9 +76,12 @@
+                     disposable.Dispose();
+             };
+
++            var mainVm = Services.GetRequiredService<MainViewModel>();
++            _ = mainVm.InitializeAsync();
++
+             desktop.MainWindow = new MainWindow
+             {
+-                DataContext = Services.GetRequiredService<MainViewModel>()
++                DataContext = mainVm
+             };
+         }

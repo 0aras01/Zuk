@@ -1,0 +1,10 @@
+--- FractalExplorer/Fractal.UI/App.axaml.cs
++++ FractalExplorer/Fractal.UI/App.axaml.cs
+@@ -73,6 +73,7 @@
+         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+         {
+             var mainVm = Services.GetRequiredService<MainViewModel>();
++            _ = mainVm.InitializeAsync(); // Start initialization
+             desktop.MainWindow = new MainWindow
+             {
+                 DataContext = mainVm

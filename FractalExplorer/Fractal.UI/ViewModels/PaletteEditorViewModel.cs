@@ -122,7 +122,7 @@ public partial class PaletteEditorViewModel : ObservableObject
         _renderingViewModel.SelectedPalette = newPalette;
 
         var allPalettes = new System.Collections.Generic.List<GradientPalette>(_renderingViewModel.Palettes);
-        _paletteService.SavePalettes(allPalettes);
+        _ = _paletteService.SavePalettesAsync(allPalettes);
     }
 }
 

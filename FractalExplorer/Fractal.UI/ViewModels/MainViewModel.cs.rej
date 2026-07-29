@@ -1,0 +1,10 @@
+--- FractalExplorer/Fractal.UI/ViewModels/MainViewModel.cs
++++ FractalExplorer/Fractal.UI/ViewModels/MainViewModel.cs
+@@ -2,6 +2,7 @@
+ using System.Collections.ObjectModel;
+ using System.Globalization;
+ using System.IO;
++using System.Threading.Tasks;
+ using Avalonia;
+ using Avalonia.Media.Imaging;
+ using CommunityToolkit.Mvvm.ComponentModel;

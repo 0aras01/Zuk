@@ -249,11 +249,6 @@ public partial class MainViewModel : ObservableObject
         Rendering.RequestRender();
     }
 
-    public async Task InitializeAsync()
-    {
-        await Rendering.InitializeAsync();
-    }
-
     public MainViewModel()
     {
         Navigation = new NavigationViewModel();
@@ -290,8 +285,8 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedLanguageChanged(string value)
     {
         _logger?.LogInformation("Language changed to {Language}", value);
-        LocalizationService.Instance.CurrentCulture = value == "PL" 
-            ? new CultureInfo("pl") 
+        LocalizationService.Instance.CurrentCulture = value == "PL"
+            ? new CultureInfo("pl")
             : new CultureInfo("en");
     }
 
