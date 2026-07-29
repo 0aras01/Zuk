@@ -5,6 +5,15 @@ using ILGPU;
 using ILGPU.Runtime;
 using Fractal.Core.Models;
 using Fractal.Core.Services;
+using Fractal.Core.Exceptions;
+
+using KernelAction = System.Action<
+    ILGPU.Index1D,
+    ILGPU.Runtime.ArrayView1D<double, ILGPU.Stride1D.Dense>,
+    ILGPU.Runtime.ArrayView1D<byte, ILGPU.Stride1D.Dense>,
+    ILGPU.Runtime.ArrayView1D<byte, ILGPU.Stride1D.Dense>,
+    Fractal.Core.Models.FractalParams>;
+
 
 namespace Fractal.Compute;
 
@@ -12,7 +21,17 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 {
     private readonly Context _context;
     private readonly Accelerator _accelerator;
-    private readonly Action<Index1D, ArrayView1D<double, Stride1D.Dense>, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble> _kernel;
+
+    private bool _disposed = false;
+    private const int LutSize = 4096;
+
+    private readonly KernelAction _mandelbrotKernel;
+    private readonly KernelAction _juliaKernel;
+    private readonly KernelAction _burningShipKernel;
+    private readonly KernelAction _tricornKernel;
+    private readonly KernelAction _celticKernel;
+    private readonly KernelAction _buffaloKernel;
+    private readonly KernelAction _multibrot3Kernel;
 
     public string Name => $"GPU (ILGPU - {_accelerator.Name})";
 
@@ -21,128 +40,259 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
     public ILGPUFractalGenerator()
     {
         _context = Context.CreateDefault();
-        _accelerator = _context.GetPreferredDevice(preferCPU: false).CreateAccelerator(_context);
+        try
+        {
+            _accelerator = _context.GetPreferredDevice(preferCPU: false).CreateAccelerator(_context);
+        }
+        catch (Exception ex)
+        {
+            _context.Dispose();
+            throw new GpuAccelerationNotAvailableException("No suitable GPU accelerator was found.", ex);
+        }
 
-        _kernel = _accelerator.LoadAutoGroupedStreamKernel<
-            Index1D, ArrayView1D<double, Stride1D.Dense>, int, int, int, int, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble, DoubleDouble>(FractalKernel);
+        _mandelbrotKernel = LoadKernel(MandelbrotKernel);
+        _juliaKernel = LoadKernel(JuliaKernel);
+        _burningShipKernel = LoadKernel(BurningShipKernel);
+        _tricornKernel = LoadKernel(TricornKernel);
+        _celticKernel = LoadKernel(CelticKernel);
+        _buffaloKernel = LoadKernel(BuffaloKernel);
+        _multibrot3Kernel = LoadKernel(Multibrot3Kernel);
     }
 
-    public static void FractalKernel(
-        Index1D index,
-        ArrayView1D<double, Stride1D.Dense> output,
-        int width,
-        int height,
-        int maxIterations,
-        int fractalType,
-        DoubleDouble juliaCReal,
-        DoubleDouble juliaCImag,
-        DoubleDouble realMin,
-        DoubleDouble realMax,
-        DoubleDouble imagMin,
-        DoubleDouble imagMax)
+    private KernelAction LoadKernel(KernelAction kernelMethod)
     {
-        int x = index % width;
-        int y = index / width;
+        return _accelerator.LoadAutoGroupedStreamKernel<
+            Index1D, ArrayView1D<double, ILGPU.Stride1D.Dense>, ArrayView1D<byte, ILGPU.Stride1D.Dense>, ArrayView1D<byte, ILGPU.Stride1D.Dense>, FractalParams>(kernelMethod);
+    }
 
-        DoubleDouble realRange = realMax - realMin;
-        DoubleDouble imagRange = imagMax - imagMin;
+    private static void MapCoordinates(Index1D index, FractalParams p, out DoubleDouble real, out DoubleDouble imag)
+    {
+        int x = index % p.Width;
+        int y = index / p.Width;
 
-        DoubleDouble real = realMin + (realRange * (double)x / width);
-        DoubleDouble imag = imagMax - (imagRange * (double)y / height);
+        DoubleDouble realRange = p.RealMax - p.RealMin;
+        DoubleDouble imagRange = p.ImagMax - p.ImagMin;
 
-        DoubleDouble zReal;
-        DoubleDouble zImag;
-        DoubleDouble cReal;
-        DoubleDouble cImag;
+        DoubleDouble dx = new DoubleDouble(x, 0.0);
+        DoubleDouble dw = new DoubleDouble(p.Width, 0.0);
+        real = p.RealMin + (realRange * (dx / dw));
 
-        if (fractalType == 1) // Julia
+        DoubleDouble dy = new DoubleDouble(y, 0.0);
+        DoubleDouble dh = new DoubleDouble(p.Height, 0.0);
+        imag = p.ImagMax - (imagRange * (dy / dh));
+    }
+
+    private static void WriteOutput(Index1D index, double smoothIter, FractalParams p, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut)
+    {
+        outputIterations[index] = smoothIter;
+        int offset = index * 4;
+
+        if (smoothIter >= p.MaxIterations)
         {
-            zReal = real;
-            zImag = imag;
-            cReal = juliaCReal;
-            cImag = juliaCImag;
+            outputPixels[offset] = 0;
+            outputPixels[offset + 1] = 0;
+            outputPixels[offset + 2] = 0;
+            outputPixels[offset + 3] = 255;
         }
         else
         {
-            zReal = 0.0;
-            zImag = 0.0;
-            cReal = real;
-            cImag = imag;
+            double t = smoothIter / p.MaxIterations;
+            int lutIndex = (int)(t * (LutSize - 1)) * 4;
+            outputPixels[offset] = lut[lutIndex];
+            outputPixels[offset + 1] = lut[lutIndex + 1];
+            outputPixels[offset + 2] = lut[lutIndex + 2];
+            outputPixels[offset + 3] = 255;
         }
+    }
+
+    public static void MandelbrotKernel(Index1D index, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut, FractalParams p)
+    {
+        MapCoordinates(index, p, out DoubleDouble cReal, out DoubleDouble cImag);
+        DoubleDouble zReal = DoubleDouble.Zero;
+        DoubleDouble zImag = DoubleDouble.Zero;
 
         int iterations = 0;
-
-        if (fractalType == 2) // Burning Ship
+        while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
         {
-            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
-            {
-                DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
-                zImag = (zReal * zImag).Abs() * 2.0 + cImag;
-                zReal = tempReal;
-                iterations++;
-            }
-        }
-        else if (fractalType == 3) // Tricorn
-        {
-            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
-            {
-                DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
-                zImag = zReal * zImag * -2.0 + cImag;
-                zReal = tempReal;
-                iterations++;
-            }
-        }
-        else if (fractalType == 4) // Celtic
-        {
-            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
-            {
-                DoubleDouble tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
-                zImag = zReal * zImag * 2.0 + cImag;
-                zReal = tempReal;
-                iterations++;
-            }
-        }
-        else if (fractalType == 5) // Buffalo
-        {
-            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
-            {
-                DoubleDouble tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
-                zImag = (zReal * zImag).Abs() * 2.0 + cImag;
-                zReal = tempReal;
-                iterations++;
-            }
-        }
-        else if (fractalType == 6) // Multibrot3
-        {
-            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
-            {
-                DoubleDouble tempReal = zReal * (zReal * zReal - zImag * zImag * 3.0) + cReal;
-                zImag = zImag * (zReal * zReal * 3.0 - zImag * zImag) + cImag;
-                zReal = tempReal;
-                iterations++;
-            }
-        }
-        else
-        {
-            while (zReal * zReal + zImag * zImag < 4.0 && iterations < maxIterations)
-            {
-                DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
-                zImag = zReal * zImag * 2.0 + cImag;
-                zReal = tempReal;
-                iterations++;
-            }
+            DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
+            zImag = zReal * zImag * DoubleDouble.Two + cImag;
+            zReal = tempReal;
+            iterations++;
         }
 
-        double smoothIter = maxIterations;
-        if (iterations < maxIterations)
+        double smoothIter = p.MaxIterations;
+        if (iterations < p.MaxIterations)
         {
             double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
-            double logDegree = fractalType == 6 ? 1.0986122886681096 : 0.6931471805599453;
+            double logDegree = 0.6931471805599453;
             smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
             if (smoothIter < 0.0) smoothIter = 0.0;
         }
 
-        output[index] = smoothIter;
+        WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
+    }
+
+    public static void JuliaKernel(Index1D index, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut, FractalParams p)
+    {
+        MapCoordinates(index, p, out DoubleDouble zReal, out DoubleDouble zImag);
+        DoubleDouble cReal = p.JuliaCReal;
+        DoubleDouble cImag = p.JuliaCImag;
+
+        int iterations = 0;
+        while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
+        {
+            DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
+            zImag = zReal * zImag * DoubleDouble.Two + cImag;
+            zReal = tempReal;
+            iterations++;
+        }
+
+        double smoothIter = p.MaxIterations;
+        if (iterations < p.MaxIterations)
+        {
+            double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
+            double logDegree = 0.6931471805599453;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
+            if (smoothIter < 0.0) smoothIter = 0.0;
+        }
+
+        WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
+    }
+
+    public static void BurningShipKernel(Index1D index, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut, FractalParams p)
+    {
+        MapCoordinates(index, p, out DoubleDouble cReal, out DoubleDouble cImag);
+        DoubleDouble zReal = DoubleDouble.Zero;
+        DoubleDouble zImag = DoubleDouble.Zero;
+
+        int iterations = 0;
+        while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
+        {
+            DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
+            zImag = (zReal * zImag).Abs() * DoubleDouble.Two + cImag;
+            zReal = tempReal;
+            iterations++;
+        }
+
+        double smoothIter = p.MaxIterations;
+        if (iterations < p.MaxIterations)
+        {
+            double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
+            double logDegree = 0.6931471805599453;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
+            if (smoothIter < 0.0) smoothIter = 0.0;
+        }
+
+        WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
+    }
+
+    public static void TricornKernel(Index1D index, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut, FractalParams p)
+    {
+        MapCoordinates(index, p, out DoubleDouble cReal, out DoubleDouble cImag);
+        DoubleDouble zReal = DoubleDouble.Zero;
+        DoubleDouble zImag = DoubleDouble.Zero;
+
+        int iterations = 0;
+        while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
+        {
+            DoubleDouble tempReal = zReal * zReal - zImag * zImag + cReal;
+            zImag = zReal * zImag * -DoubleDouble.Two + cImag;
+            zReal = tempReal;
+            iterations++;
+        }
+
+        double smoothIter = p.MaxIterations;
+        if (iterations < p.MaxIterations)
+        {
+            double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
+            double logDegree = 0.6931471805599453;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
+            if (smoothIter < 0.0) smoothIter = 0.0;
+        }
+
+        WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
+    }
+
+    public static void CelticKernel(Index1D index, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut, FractalParams p)
+    {
+        MapCoordinates(index, p, out DoubleDouble cReal, out DoubleDouble cImag);
+        DoubleDouble zReal = DoubleDouble.Zero;
+        DoubleDouble zImag = DoubleDouble.Zero;
+
+        int iterations = 0;
+        while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
+        {
+            DoubleDouble tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
+            zImag = zReal * zImag * DoubleDouble.Two + cImag;
+            zReal = tempReal;
+            iterations++;
+        }
+
+        double smoothIter = p.MaxIterations;
+        if (iterations < p.MaxIterations)
+        {
+            double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
+            double logDegree = 0.6931471805599453;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
+            if (smoothIter < 0.0) smoothIter = 0.0;
+        }
+
+        WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
+    }
+
+    public static void BuffaloKernel(Index1D index, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut, FractalParams p)
+    {
+        MapCoordinates(index, p, out DoubleDouble cReal, out DoubleDouble cImag);
+        DoubleDouble zReal = DoubleDouble.Zero;
+        DoubleDouble zImag = DoubleDouble.Zero;
+
+        int iterations = 0;
+        while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
+        {
+            DoubleDouble tempReal = (zReal * zReal - zImag * zImag).Abs() + cReal;
+            zImag = (zReal * zImag).Abs() * DoubleDouble.Two + cImag;
+            zReal = tempReal;
+            iterations++;
+        }
+
+        double smoothIter = p.MaxIterations;
+        if (iterations < p.MaxIterations)
+        {
+            double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
+            double logDegree = 0.6931471805599453;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
+            if (smoothIter < 0.0) smoothIter = 0.0;
+        }
+
+        WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
+    }
+
+    public static void Multibrot3Kernel(Index1D index, ArrayView1D<double, ILGPU.Stride1D.Dense> outputIterations, ArrayView1D<byte, ILGPU.Stride1D.Dense> outputPixels, ArrayView1D<byte, ILGPU.Stride1D.Dense> lut, FractalParams p)
+    {
+        MapCoordinates(index, p, out DoubleDouble cReal, out DoubleDouble cImag);
+        DoubleDouble zReal = DoubleDouble.Zero;
+        DoubleDouble zImag = DoubleDouble.Zero;
+        DoubleDouble three = 3.0;
+
+        int iterations = 0;
+        while (zReal * zReal + zImag * zImag < DoubleDouble.Four && iterations < p.MaxIterations)
+        {
+            DoubleDouble tempReal = zReal * (zReal * zReal - zImag * zImag * three) + cReal;
+            zImag = zImag * (zReal * zReal * three - zImag * zImag) + cImag;
+            zReal = tempReal;
+            iterations++;
+        }
+
+        double smoothIter = p.MaxIterations;
+        if (iterations < p.MaxIterations)
+        {
+            double logZn = Math.Log((double)(zReal * zReal + zImag * zImag)) * 0.5;
+            double logDegree = 1.0986122886681096;
+            smoothIter = iterations + 1.0 - Math.Log(logZn / logDegree) / logDegree;
+            if (smoothIter < 0.0) smoothIter = 0.0;
+        }
+
+        WriteOutput(index, smoothIter, p, outputIterations, outputPixels, lut);
     }
 
     public Task<(byte[] Pixels, double[] Iterations)> GenerateAsync(Viewport viewport, int maxIterations, GradientPalette palette, double paletteOffset, FractalSettings settings, CancellationToken ct)
@@ -152,52 +302,60 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
             ct.ThrowIfCancellationRequested();
 
             int totalPixels = viewport.ImageWidth * viewport.ImageHeight;
-            using var buffer = _accelerator.Allocate1D<double>(totalPixels);
 
-            ct.ThrowIfCancellationRequested();
+            using var iterationsBuffer = _accelerator.Allocate1D<double>(totalPixels);
+            using var pixelsBuffer = _accelerator.Allocate1D<byte>(totalPixels * 4);
 
-            _kernel(
-                totalPixels,
-                buffer.View,
-                viewport.ImageWidth,
-                viewport.ImageHeight,
-                maxIterations,
-                (int)settings.Type,
-                settings.JuliaCReal,
-                settings.JuliaCImag,
-                viewport.Plane.RealMin,
-                viewport.Plane.RealMax,
-                viewport.Plane.ImagMin,
-                viewport.Plane.ImagMax);
-
-            _accelerator.Synchronize();
-            ct.ThrowIfCancellationRequested();
-
-            double[] iterations = buffer.GetAsArray1D();
-            byte[] pixels = new byte[totalPixels * 4];
-
-            ParallelOptions options = new ParallelOptions { CancellationToken = ct };
-            Parallel.For(0, totalPixels, options, i =>
+            // Generowanie tablicy LUT (Look-Up Table) na CPU i kopiowanie na GPU
+            byte[] lutData = new byte[LutSize * 4];
+            for (int i = 0; i < LutSize; i++)
             {
-                double smoothIter = iterations[i];
-                byte r, g, b;
-                
-                if (smoothIter >= maxIterations)
-                {
-                    r = 0; g = 0; b = 0;
-                }
-                else
-                {
-                    double t = smoothIter / maxIterations;
-                    palette.GetColor(t, paletteOffset, out r, out g, out b);
-                }
+                double t = (double)i / (LutSize - 1);
+                palette.GetColor(t, paletteOffset, out byte r, out byte g, out byte b);
+                lutData[i * 4] = b;
+                lutData[i * 4 + 1] = g;
+                lutData[i * 4 + 2] = r;
+                lutData[i * 4 + 3] = 255;
+            }
+            using var lutBuffer = _accelerator.Allocate1D<byte>(lutData);
 
-                int offset = i * 4;
-                pixels[offset] = b;
-                pixels[offset + 1] = g;
-                pixels[offset + 2] = r;
-                pixels[offset + 3] = 255;
-            });
+            FractalParams parameters = new FractalParams
+            {
+                Width = viewport.ImageWidth,
+                Height = viewport.ImageHeight,
+                MaxIterations = maxIterations,
+                RealMin = viewport.Plane.RealMin,
+                RealMax = viewport.Plane.RealMax,
+                ImagMin = viewport.Plane.ImagMin,
+                ImagMax = viewport.Plane.ImagMax,
+                JuliaCReal = settings.JuliaCReal,
+                JuliaCImag = settings.JuliaCImag
+            };
+
+            // Wybór odpowiedniego kernela bez warp divergence!
+            KernelAction selectedKernel = settings.Type switch
+            {
+                FractalType.Julia => _juliaKernel,
+                FractalType.BurningShip => _burningShipKernel,
+                FractalType.Tricorn => _tricornKernel,
+                FractalType.Celtic => _celticKernel,
+                FractalType.Buffalo => _buffaloKernel,
+                FractalType.Multibrot3 => _multibrot3Kernel,
+                _ => _mandelbrotKernel
+            };
+
+            selectedKernel(
+                totalPixels,
+                iterationsBuffer.View,
+                pixelsBuffer.View,
+                lutBuffer.View,
+                parameters);
+
+            ct.ThrowIfCancellationRequested();
+
+            // Kopiowanie wyników z powrotem do CPU (GetAsArray1D domyślnie czeka na strumień)
+            double[] iterations = iterationsBuffer.GetAsArray1D();
+            byte[] pixels = pixelsBuffer.GetAsArray1D();
 
             return (pixels, iterations);
         }, ct);
@@ -205,8 +363,11 @@ public class ILGPUFractalGenerator : IFractalGenerator, IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+
         _accelerator?.Dispose();
         _context?.Dispose();
+
+        _disposed = true;
     }
 }
-
