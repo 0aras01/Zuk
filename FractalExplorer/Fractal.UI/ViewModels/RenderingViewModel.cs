@@ -97,7 +97,7 @@ public partial class RenderingViewModel : ObservableObject
     public async Task InitializeAsync()
     {
         var paletteService = new PaletteService();
-        var palettes = await paletteService.LoadPalettesAsync();
+        List<GradientPalette> palettes = await paletteService.LoadPalettesAsync();
 
         Palettes.Clear();
         foreach (var p in palettes)
