@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Fractal.Core.Models;
@@ -17,15 +18,17 @@ public class PaletteService : IPaletteService
 {
     private readonly string _filePath;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly IFileSystem _fileSystem;
 
-    public PaletteService()
+    public PaletteService(IFileSystem? fileSystem = null)
     {
-        string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FractalExplorer");
-        if (!Directory.Exists(folder))
+        _fileSystem = fileSystem ?? new FileSystem();
+        string folder = _fileSystem.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FractalExplorer");
+        if (!_fileSystem.Directory.Exists(folder))
         {
-            Directory.CreateDirectory(folder);
+            _fileSystem.Directory.CreateDirectory(folder);
         }
-        _filePath = Path.Combine(folder, "palettes.json");
+        _filePath = _fileSystem.Path.Combine(folder, "palettes.json");
 
         _jsonOptions = new JsonSerializerOptions
         {
@@ -35,7 +38,7 @@ public class PaletteService : IPaletteService
 
     public async Task<List<GradientPalette>> LoadPalettesAsync()
     {
-        if (!File.Exists(_filePath))
+        if (!_fileSystem.File.Exists(_filePath))
         {
             var defaults = GetDefaultPalettes();
             await SavePalettesAsync(defaults);
