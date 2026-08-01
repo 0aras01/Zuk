@@ -86,20 +86,21 @@ public partial class RenderingViewModel : ObservableObject
     public RenderingViewModel()
     {
         _gpuGenerator = new ParallelFractalGenerator();
-        LoadPalettes();
     }
 
     public RenderingViewModel(IFractalGenerator fractalGenerator, IZoomService zoomService, ILogger<RenderingViewModel> logger)
     {
         _gpuGenerator = fractalGenerator;
         _logger = logger;
-        LoadPalettes();
     }
 
-    private void LoadPalettes()
+    public async Task InitializeAsync()
     {
         var paletteService = new PaletteService();
-        foreach (var p in paletteService.LoadPalettes())
+        List<GradientPalette> palettes = await paletteService.LoadPalettesAsync();
+
+        Palettes.Clear();
+        foreach (var p in palettes)
         {
             Palettes.Add(p);
         }

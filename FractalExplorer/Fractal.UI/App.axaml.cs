@@ -76,9 +76,12 @@ public partial class App : Application
                     disposable.Dispose();
             };
 
+            var mainVm = Services.GetRequiredService<MainViewModel>();
+            _ = mainVm.InitializeAsync();
+
             desktop.MainWindow = new MainWindow
             {
-                DataContext = Services.GetRequiredService<MainViewModel>()
+                DataContext = mainVm
             };
         }
 

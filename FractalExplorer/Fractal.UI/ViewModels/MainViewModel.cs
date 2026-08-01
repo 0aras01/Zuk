@@ -249,6 +249,11 @@ public partial class MainViewModel : ObservableObject
         Rendering.RequestRender();
     }
 
+    public async Task InitializeAsync()
+    {
+        await Rendering.InitializeAsync();
+    }
+
     public MainViewModel()
     {
         Navigation = new NavigationViewModel();

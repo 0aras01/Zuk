@@ -131,6 +131,7 @@ public class E2ETests : IDisposable
         var vm = new MainViewModel(gpuGen, zoomService, bookmarkService, new TestConsoleLogger<MainViewModel>(), new TestConsoleLogger<RenderingViewModel>());
         vm.OnSizeChanged(width, height);
         await vm.GenerateFractalCommand.ExecuteAsync(null);
+        await vm.Rendering.InitializeAsync();
         return vm;
     }
 

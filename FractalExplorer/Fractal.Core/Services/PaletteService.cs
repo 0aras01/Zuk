@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Fractal.Core.Models;
 
 namespace Fractal.Core.Services;
 
 public interface IPaletteService
 {
-    List<GradientPalette> LoadPalettes();
-    void SavePalettes(List<GradientPalette> palettes);
+    Task<List<GradientPalette>> LoadPalettesAsync();
+    Task SavePalettesAsync(List<GradientPalette> palettes);
 }
 
 public class PaletteService : IPaletteService
@@ -35,18 +36,18 @@ public class PaletteService : IPaletteService
         };
     }
 
-    public List<GradientPalette> LoadPalettes()
+    public async Task<List<GradientPalette>> LoadPalettesAsync()
     {
         if (!_fileSystem.File.Exists(_filePath))
         {
             var defaults = GetDefaultPalettes();
-            SavePalettes(defaults);
+            await SavePalettesAsync(defaults);
             return defaults;
         }
 
         try
         {
-            string json = _fileSystem.File.ReadAllText(_filePath);
+            string json = await File.ReadAllTextAsync(_filePath);
             var list = JsonSerializer.Deserialize<List<GradientPalette>>(json, _jsonOptions) ?? new List<GradientPalette>();
             var defaults = GetDefaultPalettes();
             defaults.AddRange(list);
@@ -58,7 +59,7 @@ public class PaletteService : IPaletteService
         }
     }
 
-    public void SavePalettes(List<GradientPalette> palettes)
+    public async Task SavePalettesAsync(List<GradientPalette> palettes)
     {
         try
         {
@@ -72,7 +73,7 @@ public class PaletteService : IPaletteService
                 }
             }
             string json = JsonSerializer.Serialize(customPalettes, _jsonOptions);
-            _fileSystem.File.WriteAllText(_filePath, json);
+            await File.WriteAllTextAsync(_filePath, json);
         }
         catch
         {
